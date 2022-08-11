@@ -264,7 +264,7 @@ export IMPALA_TEZ_URL=${CDP_TEZ_URL-}
 export IMPALA_GCS_VERSION=${CDP_GCS_VERSION}
 
 export APACHE_COMPONENTS_HOME="$IMPALA_TOOLCHAIN/apache_components"
-export USE_APACHE_HIVE=${USE_APACHE_HIVE-false}
+export USE_APACHE_HIVE=${USE_APACHE_HIVE-true}
 if $USE_APACHE_HIVE; then
   # When USE_APACHE_HIVE is set we use the apache hive version to build as well as deploy
   # in the minicluster
