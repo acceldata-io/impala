@@ -60,6 +60,7 @@ import org.apache.hadoop.hive.metastore.api.TxnAbortedException;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.metastore.utils.FileUtils;
 import org.apache.hadoop.hive.metastore.utils.MetaStoreUtils;
+import org.apache.hadoop.hive.metastore.utils.MetaStoreServerUtils;
 import org.apache.hadoop.hive.ql.metadata.ForeignKeyInfo;
 import org.apache.hadoop.hive.ql.metadata.PrimaryKeyInfo;
 import org.apache.hive.service.rpc.thrift.TGetColumnsReq;
@@ -204,7 +205,7 @@ public class Hive3MetastoreShimBase {
    */
   public static void updatePartitionStatsFast(Partition partition, org.apache.hadoop.hive.metastore.api.Table tbl,
                                               Warehouse warehouse) throws MetaException {
-    MetaStoreUtils.updatePartitionStatsFast(partition, tbl, warehouse, /*madeDir*/false,
+    MetaStoreServerUtils.updatePartitionStatsFast(partition, tbl, warehouse, /*madeDir*/false,
             /*forceRecompute*/false,
             /*environmentContext*/null, /*isCreate*/false);
   }
