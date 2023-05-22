@@ -17,34 +17,52 @@
 
 package org.apache.impala.compat;
 
+import static org.apache.hadoop.hive.metastore.api.hive_metastoreConstants.ACCESSTYPE_NONE;
+import static org.apache.hadoop.hive.metastore.api.hive_metastoreConstants.ACCESSTYPE_READONLY;
+import static org.apache.hadoop.hive.metastore.api.hive_metastoreConstants.ACCESSTYPE_READWRITE;
+import static org.apache.hadoop.hive.metastore.api.hive_metastoreConstants.ACCESSTYPE_WRITEONLY;
 import static org.apache.impala.service.MetadataOp.TABLE_TYPE_TABLE;
 import static org.apache.impala.service.MetadataOp.TABLE_TYPE_VIEW;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import java.lang.reflect.Proxy;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.hive.common.ValidTxnList;
 import org.apache.hadoop.hive.common.ValidWriteIdList;
+import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
 import org.apache.hadoop.hive.metastore.IMetaStoreClient;
 import org.apache.hadoop.hive.metastore.RetryingMetaStoreClient;
 import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.api.ColumnStatistics;
 import org.apache.hadoop.hive.metastore.api.ColumnStatisticsObj;
+import org.apache.hadoop.hive.metastore.api.CompactionInfoStruct;
 import org.apache.hadoop.hive.metastore.api.Database;
 import org.apache.hadoop.hive.metastore.api.FireEventRequest;
 import org.apache.hadoop.hive.metastore.api.FireEventRequestData;
+import org.apache.hadoop.hive.metastore.api.FireEventResponse;
+import org.apache.hadoop.hive.metastore.api.GetAllWriteEventInfoRequest;
+import org.apache.hadoop.hive.metastore.api.GetLatestCommittedCompactionInfoRequest;
+import org.apache.hadoop.hive.metastore.api.GetLatestCommittedCompactionInfoResponse;
 import org.apache.hadoop.hive.metastore.api.InsertEventRequestData;
 import org.apache.hadoop.hive.metastore.api.InvalidInputException;
 import org.apache.hadoop.hive.metastore.api.InvalidObjectException;
@@ -55,34 +73,57 @@ import org.apache.hadoop.hive.metastore.api.NotificationEvent;
 import org.apache.hadoop.hive.metastore.api.NotificationEventRequest;
 import org.apache.hadoop.hive.metastore.api.NotificationEventResponse;
 import org.apache.hadoop.hive.metastore.api.Partition;
+import org.apache.hadoop.hive.metastore.api.PartitionsRequest;
+import org.apache.hadoop.hive.metastore.api.SetPartitionsStatsRequest;
 import org.apache.hadoop.hive.metastore.api.Table;
+import org.apache.hadoop.hive.metastore.api.WriteEventInfo;
+import org.apache.hadoop.hive.metastore.api.WriteNotificationLogRequest;
+import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.metastore.api.TableValidWriteIds;
 import org.apache.hadoop.hive.metastore.api.ThriftHiveMetastore;
 import org.apache.hadoop.hive.metastore.api.ThriftHiveMetastore.Client;
 import org.apache.hadoop.hive.metastore.messaging.AlterTableMessage;
+import org.apache.hadoop.hive.metastore.messaging.CommitTxnMessage;
 import org.apache.hadoop.hive.metastore.messaging.EventMessage;
+import org.apache.hadoop.hive.metastore.messaging.MessageBuilder;
 import org.apache.hadoop.hive.metastore.messaging.MessageDeserializer;
+import org.apache.hadoop.hive.metastore.messaging.MessageEncoder;
 import org.apache.hadoop.hive.metastore.messaging.MessageFactory;
+import org.apache.hadoop.hive.metastore.messaging.MessageSerializer;
 import org.apache.hadoop.hive.metastore.messaging.json.JSONDropDatabaseMessage;
-import org.apache.hadoop.hive.metastore.messaging.json.JSONMessageFactory;
+import org.apache.hadoop.hive.hcatalog.messaging.json.JSONMessageFactory;
+import org.apache.hadoop.hive.metastore.utils.MetaStoreUtils;
 import org.apache.hadoop.hive.metastore.txn.TxnUtils;
 import org.apache.hadoop.hive.metastore.utils.FileUtils;
+import org.apache.impala.analysis.TableName;
 import org.apache.impala.catalog.CatalogException;
 import org.apache.impala.catalog.CatalogServiceCatalog;
+import org.apache.impala.catalog.CompactionInfoLoader;
+import org.apache.impala.catalog.DatabaseNotFoundException;
 import org.apache.impala.catalog.HdfsPartition;
 import org.apache.impala.catalog.HdfsTable;
 import org.apache.impala.catalog.Hive3MetastoreShimBase;
 import org.apache.impala.catalog.MetaStoreClientPool;
 import org.apache.impala.catalog.MetaStoreClientPool.MetaStoreClient;
+import org.apache.impala.catalog.TableNotFoundException;
+import org.apache.impala.catalog.TableNotLoadedException;
+import org.apache.impala.catalog.TableWriteId;
 import org.apache.impala.catalog.events.MetastoreEvents.MetastoreEvent;
+import org.apache.impala.catalog.events.MetastoreEvents.MetastoreEventType;
+import org.apache.impala.catalog.events.MetastoreEventsProcessor;
 import org.apache.impala.catalog.events.MetastoreNotificationException;
+import org.apache.impala.catalog.events.MetastoreNotificationNeedsInvalidateException;
 import org.apache.impala.catalog.events.SelfEventContext;
 import org.apache.impala.catalog.local.MetaProvider.PartitionMetadata;
 import org.apache.impala.catalog.local.MetaProvider.PartitionRef;
 import org.apache.impala.catalog.local.MetaProvider.TableMetaRef;
+import org.apache.impala.catalog.metastore.CatalogMetastoreServer;
 import org.apache.impala.catalog.metastore.ICatalogMetastoreServer;
 import org.apache.impala.common.ImpalaRuntimeException;
 import org.apache.impala.common.Metrics;
+import org.apache.impala.common.PrintUtils;
+import org.apache.impala.hive.common.MutableValidWriteIdList;
+import org.apache.impala.service.BackendConfig;
 import org.apache.impala.service.CatalogOpExecutor;
 import org.apache.impala.util.AcidUtils;
 import org.apache.impala.util.AcidUtils.TblTransaction;
@@ -160,6 +201,7 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
    */
   public static ColumnStatistics createNewHiveColStats() {
     ColumnStatistics colStats = new ColumnStatistics();
+    colStats.setEngine(IMPALA_ENGINE);
     return colStats;
   }
 
@@ -180,6 +222,8 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
     switch (tType) {
       case EXTERNAL_TABLE:
       case MANAGED_TABLE:
+      //Deprecated and removed in Hive-3.. //TODO throw exception?
+      case INDEX_TABLE:
         return TABLE_TYPE_TABLE;
       case VIRTUAL_VIEW:
       case MATERIALIZED_VIEW:
@@ -189,12 +233,17 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
     }
   }
 
+  //hive-3 has a different class to encode and decode event messages
+  //check with Ashwin here
+  private static final MessageEncoder eventMessageEncoder_ =
+      MessageFactory.getDefaultInstance(MetastoreConf.newMetastoreConf());
+
   /**
    * Wrapper method which returns HMS-3 Message factory in case Impala is
    * building against Apache Hive-3
    */
   public static MessageDeserializer getMessageDeserializer() {
-    return MessageFactory.getInstance().getDeserializer();
+    return eventMessageEncoder_.getDeserializer();
   }
 
   /**
@@ -204,8 +253,8 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
    * @param values
    * @return
    */
-  public static String makePartName(List<String> partitionColNames, List<String> values) {
-    return FileUtils.makePartName(partitionColNames, values);
+  public static MessageSerializer getMessageSerializer() {
+    return eventMessageEncoder_.getSerializer();
   }
 
   /**
@@ -215,8 +264,8 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
   @VisibleForTesting
   public static AlterTableMessage buildAlterTableMessage(Table before, Table after,
       boolean isTruncateOp, long writeId) {
-    return JSONMessageFactory.getInstance().buildAlterTableMessage(before, after,
-        isTruncateOp);
+    return MessageBuilder.getInstance().buildAlterTableMessage(before, after,
+        isTruncateOp, writeId);
   }
 
   /**
@@ -226,7 +275,7 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
    */
   @VisibleForTesting
   public static String serializeEventMessage(EventMessage message) {
-    return message.toString();
+    return getMessageSerializer().serialize(message);
   }
 
   /**
@@ -237,12 +286,7 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
    */
   public static ValidWriteIdList fetchValidWriteIds(IMetaStoreClient client,
       String tableFullName) throws TException {
-    // fix HIVE-20929
-    ValidTxnList txns = client.getValidTxns();
-    List<String> tablesList = Collections.singletonList(tableFullName);
-    List<TableValidWriteIds> writeIdList = client
-        .getValidWriteIds(tablesList, txns.toString());
-    return TxnUtils.createValidReaderWriteIdList(writeIdList.get(0));
+    return client.getValidWriteIds(tableFullName);
   }
 
   /**
@@ -252,7 +296,7 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
    */
   public static long getWriteIdFromMSPartition(Partition partition) {
     Preconditions.checkNotNull(partition);
-    return NumberUtils.toLong(partition.getParameters().get(WRITEID), -1);
+    return partition.getWriteId();
   }
 
   /**
@@ -262,7 +306,7 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
    */
   public static void setWriteIdToMSPartition(Partition partition, long writeId) {
     Preconditions.checkNotNull(partition);
-    partition.getParameters().put(WRITEID, String.valueOf(writeId));
+    partition.setWriteId(writeId);
   }
 
   /**
@@ -272,7 +316,7 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
    */
   public static long getWriteIdFromMSTable(Table msTbl) {
     Preconditions.checkNotNull(msTbl);
-    return NumberUtils.toLong(msTbl.getParameters().get(WRITEID), -1);
+    return msTbl.getWriteId();
   }
 
   /**
@@ -284,7 +328,18 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
    * - materialized view read
    */
   public static synchronized void setHiveClientCapabilities() {
+    String hostName;
     if (capabilitiestSet_) return;
+    try {
+      hostName = InetAddress.getLocalHost().getCanonicalHostName();
+    } catch (UnknownHostException ue) {
+      hostName = "unknown";
+    }
+    String buildVersion = BackendConfig.INSTANCE != null ?
+        BackendConfig.INSTANCE.getImpalaBuildVersion() : String.valueOf(MAJOR_VERSION);
+    if (buildVersion == null) buildVersion = String.valueOf(MAJOR_VERSION);
+
+    String impalaId = String.format("Impala%s@%s", buildVersion, hostName);
     String[] capabilities = new String[] {
         EXTWRITE, // External table write
         EXTREAD,  // External table read
@@ -301,7 +356,9 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
                     // TODO: will remove this capability when Hive can provide
                     // API calls to tell the changing of bucket number.
     };
-    processorCapabilities = Lists.newArrayList(capabilities);
+
+    HiveMetaStoreClient.setProcessorIdentifier(impalaId);
+    HiveMetaStoreClient.setProcessorCapabilities(capabilities);
     capabilitiestSet_ = true;
   }
 
@@ -319,7 +376,7 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
     // ACCESSTYPE_WRITEONLY: 00000100
     // ACCESSTYPE_READWRITE: 00001000
     return requiredCapability != ACCESSTYPE_NONE
-        && ((getAccessType(msTbl) & requiredCapability) != 0);
+        && ((msTbl.getAccessType() & requiredCapability) != 0);
   }
 
   /**
@@ -329,7 +386,7 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
    */
   public static String getTableAccessType(Table msTbl) {
     Preconditions.checkNotNull(msTbl);
-    switch (getAccessType(msTbl)) {
+    switch (msTbl.getAccessType()) {
       case ACCESSTYPE_READONLY:
         return "READONLY";
       case ACCESSTYPE_WRITEONLY:
@@ -349,7 +406,7 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
    */
   public static void setTableAccessType(Table msTbl, byte accessType) {
     Preconditions.checkNotNull(msTbl);
-    msTbl.getParameters().put(ACCESSTYPE, String.valueOf(accessType));
+    msTbl.setAccessType(accessType);
   }
 
   /**
@@ -358,8 +415,20 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
   public static void setTableColumnStatsTransactional(IMetaStoreClient client,
       Table msTbl, ColumnStatistics colStats, TblTransaction tblTxn)
       throws ImpalaRuntimeException {
-    throw new UnsupportedOperationException(
-            "setTableColumnStatsTransactional is not supported.");
+    List<ColumnStatistics> colStatsList = new ArrayList<>();
+    colStatsList.add(colStats);
+    SetPartitionsStatsRequest request = new SetPartitionsStatsRequest(colStatsList);
+    request.setWriteId(tblTxn.writeId);
+    request.setValidWriteIdList(tblTxn.validWriteIds);
+    try {
+      // Despite its name, the function below can and (and currently must) be used
+      // to set table level column statistics in transactional tables.
+      client.setPartitionColumnStatistics(request);
+    }
+    catch (TException e) {
+      throw new ImpalaRuntimeException(
+          String.format(HMS_RPC_ERROR_FORMAT_STR, "setPartitionColumnStatistics"), e);
+    }
   }
 
   /**
@@ -404,8 +473,27 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
   private static void fireInsertTransactionalEventHelper(
       IMetaStoreClient hiveClient, TableInsertEventInfo insertEventInfo, String dbName,
       String tableName) throws TException {
-    throw new UnsupportedOperationException(
-        "fireInsertTransactionalEventHelper is not supported.");
+    for (InsertEventRequestData insertData : insertEventInfo.getInsertEventReqData()) {
+      // TODO(Vihang) unfortunately there is no bulk insert event API for transactional
+      // tables. It is possible that this may take long time here if there are lots of
+      // partitions which were inserted.
+      if (LOG.isDebugEnabled()) {
+        String msg =
+            "Firing write notification log request for table " + dbName + "." + tableName
+                + (insertData.isSetPartitionVal() ? " on partition " + insertData
+                .getPartitionVal() : "");
+        LOG.debug(msg);
+      }
+      WriteNotificationLogRequest rqst = new WriteNotificationLogRequest(
+          insertEventInfo.getTxnId(), insertEventInfo.getWriteId(), dbName, tableName,
+          insertData);
+      if (insertData.isSetPartitionVal()) {
+        rqst.setPartitionVals(insertData.getPartitionVal());
+      }
+      // TODO(Vihang) metastore should return the event id here so that we can get rid
+      // of firing INSERT event types for transactional tables.
+      hiveClient.addWriteNotificationLog(rqst);
+    }
   }
 
   /**
@@ -442,14 +530,26 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
       FireEventRequest rqst = new FireEventRequest(true, data);
       rqst.setDbName(dbName);
       rqst.setTableName(tableName);
-      if (partitionVals != null && !partitionVals.isEmpty()) {
-        rqst.setPartitionVals(partitionVals);
+    if (insertEventDataList.size() == 1) {
+      InsertEventRequestData insertEventData = Iterables
+          .getOnlyElement(insertEventDataList);
+      if (insertEventData.getPartitionVal() != null) {
+        rqst.setPartitionVals(insertEventData.getPartitionVal());
       }
+      // single insert event API
       data.setInsertData(insertEventData);
-      msClient.fireListenerEvent(rqst);
+    } else {
+      // use bulk insert API
+      data.setInsertDatas(insertEventDataList);
     }
-    //TODO: IMPALA-8632: Add support for self-event detection for insert events
+    FireEventResponse response = msClient.fireListenerEvent(rqst);
+    if (!response.isSetEventIds()) {
+      LOG.error("FireEventResponse does not have event ids set for table {}.{}. This "
+              + "may cause the table to unnecessarily be refreshed when the insert event "
+              + "is received.", dbName, tableName);
     return Collections.EMPTY_LIST;
+  }
+    return response.getEventIds();
   }
 
   /**
@@ -493,17 +593,14 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
    * Wrapper around Database.setManagedLocationUri() to deal with added arguments.
    */
   public static void setManagedLocationUri(Database db, String managedLocation) {
-    db.getParameters().put(MANAGEDLOCATIONURI, managedLocation);
+    db.setManagedLocationUri(managedLocation);
   }
 
   /**
    * Wrapper around HMS Database object to get managedLocationUri.
    */
   public static String getManagedLocationUri(Database db) {
-    if (db.getParameters().containsKey(MANAGEDLOCATIONURI)) {
-      return db.getParameters().get(MANAGEDLOCATIONURI);
-    }
-    return null;
+    return db.getManagedLocationUri();
   }
 
   /**
@@ -516,10 +613,9 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
   /**
    * Wrapper around JSONDropDatabaseMessage to get database.
    */
-  public static Database getDatabaseObject(JSONDropDatabaseMessage dropDatabaseMessage) {
-    Database database = new Database();
-    database.setName(dropDatabaseMessage.getDB());
-    return database;
+  public static Database getDatabaseObject(JSONDropDatabaseMessage dropDatabaseMessage)
+      throws Exception {
+    return dropDatabaseMessage.getDatabaseObject();
   }
 
   /**
@@ -528,15 +624,18 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
   public static void truncateTable(IMetaStoreClient msClient, String dbName,
       String tableName, List<String> partNames,
       String validWriteIds, long writeId) throws TException {
-    msClient.truncateTable(dbName, tableName, partNames);
+    msClient.truncateTable(dbName, tableName, partNames, validWriteIds, writeId);
   }
 
   /**
-   * Wrapper around IMetaStoreClient.listPartitions() to deal with added arguments.
+   * Wrapper around IMetaStoreClient.getPartitionsRequest() to deal with added arguments.
    */
   public static List<Partition> getPartitions(IMetaStoreClient msClient,
       String testDbName, String testTblName) throws TException {
-    return msClient.listPartitions(testDbName, testTblName, (short) -1);
+    PartitionsRequest req = new PartitionsRequest();
+    req.setDbName(testDbName);
+    req.setTblName(testTblName);
+    return msClient.getPartitionsRequest(req).getPartitions();
   }
 
   /**
@@ -545,6 +644,9 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
    */
   public static void setPartitionVal(InsertEventRequestData insertEventRequestData,
       List<String> partVals) {
+    if (partVals != null && !partVals.isEmpty()) {
+      insertEventRequestData.setPartitionVal(partVals);
+    }
   }
 
   /**
@@ -552,26 +654,117 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
    */
   public static void addToSubDirectoryList(InsertEventRequestData insertEventRequestData,
       String acidDirPath) {
-    throw new UnsupportedOperationException("addToSubDirectoryList is not supported.");
+    insertEventRequestData.addToSubDirectoryList(acidDirPath);
   }
 
   /**
-   * CDP Hive-3 only function.
+   * This method fetches latest compaction id from HMS and compares it with the cached
+   * compaction id. It returns list of partitions that need to refresh file metadata due
+   * to compactions. If none of the partitions need to refresh, it returns empty list.
    */
   public static List<HdfsPartition.Builder> getPartitionsForRefreshingFileMetadata(
       CatalogServiceCatalog catalog, HdfsTable hdfsTable) throws CatalogException {
-    throw new UnsupportedOperationException(
-        "getPartitionsForRefreshingFileMetadata is not supported.");
+    List<HdfsPartition.Builder> partBuilders = new ArrayList<>();
+    // fetch the latest compaction info from HMS
+    GetLatestCommittedCompactionInfoRequest request =
+        new GetLatestCommittedCompactionInfoRequest(
+            hdfsTable.getDb().getName(), hdfsTable.getName());
+    if (hdfsTable.getLastCompactionId() > 0) {
+      request.setLastCompactionId(hdfsTable.getLastCompactionId());
+    }
+
+    GetLatestCommittedCompactionInfoResponse response;
+    try (MetaStoreClientPool.MetaStoreClient client = catalog.getMetaStoreClient()) {
+      response = CompactionInfoLoader.getLatestCompactionInfo(client, request);
+    } catch (Exception e) {
+      throw new CatalogException("Error getting latest compaction info for "
+          + hdfsTable.getFullName(), e);
+    }
+
+    Map<String, Long> partNameToCompactionId = new HashMap<>();
+    if (hdfsTable.isPartitioned()) {
+      for (CompactionInfoStruct ci : response.getCompactions()) {
+        partNameToCompactionId.put(
+            Preconditions.checkNotNull(ci.getPartitionname()), ci.getId());
+      }
+    } else {
+      CompactionInfoStruct ci = Iterables.getOnlyElement(response.getCompactions(), null);
+      if (ci != null) {
+        partNameToCompactionId.put(HdfsTable.DEFAULT_PARTITION_NAME, ci.getId());
+      }
+    }
+
+    for (HdfsPartition partition : hdfsTable.getPartitionsForNames(
+        partNameToCompactionId.keySet())) {
+      long latestCompactionId = partNameToCompactionId.get(partition.getPartitionName());
+      HdfsPartition.Builder builder = new HdfsPartition.Builder(partition);
+      LOG.debug(
+          "Cached compaction id for {} partition {}: {} but the latest compaction id: {}",
+          hdfsTable.getFullName(), partition.getPartitionName(),
+          partition.getLastCompactionId(), latestCompactionId);
+      builder.setLastCompactionId(latestCompactionId);
+      partBuilders.add(builder);
+    }
+    return partBuilders;
   }
 
   /**
-   * CDP Hive-3 only function.
+   * Fetches the latest compaction id from HMS and compares with partition metadata in
+   * cache. If a partition is stale due to compaction, removes it from metas.
    */
   public static List<PartitionRef> checkLatestCompaction(MetaStoreClientPool msClientPool,
       String dbName, String tableName, TableMetaRef table,
       Map<PartitionRef, PartitionMetadata> metas, String unPartitionedName)
       throws TException {
-    throw new UnsupportedOperationException("checkLatestCompaction is not supported.");
+    Preconditions.checkNotNull(table, "TableMetaRef must be non-null");
+    Preconditions.checkNotNull(metas, "Partition map must be non-null");
+    if (metas.isEmpty()) {
+      return Collections.emptyList();
+    }
+    Stopwatch sw = Stopwatch.createStarted();
+    List<PartitionRef> stalePartitions = new ArrayList<>();
+    if (!table.isTransactional() || metas.isEmpty()) return stalePartitions;
+    GetLatestCommittedCompactionInfoRequest request =
+        new GetLatestCommittedCompactionInfoRequest(dbName, tableName);
+    if (table.isPartitioned()) {
+      request.setPartitionnames(metas.keySet().stream()
+          .map(PartitionRef::getName).collect(Collectors.toList()));
+    }
+    long lastCompactionId = metas.values().stream()
+        .mapToLong(p -> p.getLastCompactionId()).max().orElse(-1);
+    if (lastCompactionId > 0) {
+      request.setLastCompactionId(lastCompactionId);
+    }
+
+    GetLatestCommittedCompactionInfoResponse response;
+    try (MetaStoreClientPool.MetaStoreClient client = msClientPool.getClient()) {
+      response = CompactionInfoLoader.getLatestCompactionInfo(client, request);
+    }
+    Map<String, Long> partNameToCompactionId = new HashMap<>();
+    if (table.isPartitioned()) {
+      for (CompactionInfoStruct ci : response.getCompactions()) {
+        partNameToCompactionId.put(
+            Preconditions.checkNotNull(ci.getPartitionname()), ci.getId());
+      }
+    } else {
+      CompactionInfoStruct ci = Iterables.getOnlyElement(response.getCompactions(),
+          null);
+      if (ci != null) {
+        partNameToCompactionId.put(unPartitionedName, ci.getId());
+      }
+    }
+    Iterator<Entry<PartitionRef, PartitionMetadata>> iter =
+        metas.entrySet().iterator();
+    while (iter.hasNext()) {
+      Map.Entry<PartitionRef, PartitionMetadata> entry = iter.next();
+      if (partNameToCompactionId.containsKey(entry.getKey().getName())) {
+        stalePartitions.add(entry.getKey());
+        iter.remove();
+      }
+    }
+    LOG.debug("Checked the latest compaction info for {}.{}. Time taken: {}", dbName,
+        tableName, PrintUtils.printTimeMs(sw.stop().elapsed(TimeUnit.MILLISECONDS)));
+    return stalePartitions;
   }
 
   /**

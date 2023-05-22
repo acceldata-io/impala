@@ -205,8 +205,8 @@ export CDP_GCS_VERSION=2.1.2.7.2.15.0-88
 # Ref: https://infra.apache.org/release-download-pages.html#closer
 : ${APACHE_MIRROR:="https://www.apache.org/dyn/closer.cgi"}
 export APACHE_MIRROR
-export APACHE_HIVE_VERSION=3.1.2
-export APACHE_HIVE_STORAGE_API_VERSION=2.7.0
+export APACHE_HIVE_VERSION=4.0.0-alpha-1
+export APACHE_HIVE_STORAGE_API_VERSION=4.0.0-alpha-1
 
 export ARCH_NAME=$(uname -p)
 
@@ -273,7 +273,7 @@ export IMPALA_TEZ_URL=${CDP_TEZ_URL-}
 export IMPALA_GCS_VERSION=${CDP_GCS_VERSION}
 
 export APACHE_COMPONENTS_HOME="$IMPALA_TOOLCHAIN/apache_components"
-export USE_APACHE_HIVE=${USE_APACHE_HIVE-false}
+export USE_APACHE_HIVE=${USE_APACHE_HIVE-true}
 if $USE_APACHE_HIVE; then
   # When USE_APACHE_HIVE is set we use the apache hive version to build as well as deploy
   # in the minicluster
