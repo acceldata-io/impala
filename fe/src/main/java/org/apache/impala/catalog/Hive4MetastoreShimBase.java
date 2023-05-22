@@ -28,6 +28,7 @@ import org.apache.hadoop.hive.metastore.TableType;
 import org.apache.hadoop.hive.metastore.Warehouse;
 import org.apache.hadoop.hive.metastore.api.*;
 import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
+import org.apache.hadoop.hive.metastore.utils.MetaStoreServerUtils;
 import org.apache.hadoop.hive.metastore.utils.FileUtils;
 import org.apache.hadoop.hive.metastore.utils.MetaStoreUtils;
 import org.apache.hadoop.hive.ql.metadata.ForeignKeyInfo;
@@ -104,9 +105,9 @@ public class Hive4MetastoreShimBase {
       }
       tblTxn.txnId = txnId;
       tblTxn.writeId =
-          allocateTableWriteId(client, txnId, tbl.getDbName(), tbl.getTableName());
+          allocateTableWriteId(client, txnId, tbl.getDb().getName(), tbl.getTableName());
       tblTxn.validWriteIds =
-          getValidWriteIdListInTxn(client, tbl.getDbName(), tbl.getTableName(), txnId);
+          getValidWriteIdListInTxn(client, tbl.getDb().getName(), tbl.getTableName(), txnId);
       return tblTxn;
     } catch (TException e) {
       if (tblTxn.ownsTxn) {
@@ -150,7 +151,7 @@ public class Hive4MetastoreShimBase {
   public static void alterPartition(IMetaStoreClient client, Partition partition)
       throws InvalidOperationException, MetaException, TException {
     client.alter_partition(
-        partition.getDbName(), partition.getTableName(), partition, null);
+        partition.getDb().getName(), partition.getTableName(), partition, null);
   }
 
   /**
@@ -170,7 +171,7 @@ public class Hive4MetastoreShimBase {
   public static void createTableWithConstraints(IMetaStoreClient client,
       Table newTbl, List<SQLPrimaryKey> primaryKeys, List<SQLForeignKey> foreignKeys)
       throws InvalidOperationException, MetaException, TException {
-    client.createTableWithConstraints(newTbl, primaryKeys, foreignKeys, null, null,
+    client.createTableWithConstraints(newTbl.getMetaStoreTable(), primaryKeys, foreignKeys, null, null,
         null, null);
   }
 

@@ -50,6 +50,7 @@ import org.apache.hadoop.hive.metastore.api.InvalidInputException;
 import org.apache.hadoop.hive.metastore.api.InvalidObjectException;
 import org.apache.hadoop.hive.metastore.api.InvalidOperationException;
 import org.apache.hadoop.hive.metastore.api.MetaException;
+import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 import org.apache.hadoop.hive.metastore.api.NoSuchObjectException;
 import org.apache.hadoop.hive.metastore.api.NotificationEvent;
 import org.apache.hadoop.hive.metastore.api.NotificationEventRequest;
@@ -64,8 +65,9 @@ import org.apache.hadoop.hive.metastore.messaging.EventMessage;
 import org.apache.hadoop.hive.metastore.messaging.MessageDeserializer;
 import org.apache.hadoop.hive.metastore.messaging.MessageFactory;
 import org.apache.hadoop.hive.metastore.messaging.json.JSONDropDatabaseMessage;
-import org.apache.hadoop.hive.hcatalog.messaging.json.JSONMessageFactory;
+import org.apache.hive.hcatalog.messaging.json.JSONMessageFactory;
 import org.apache.hadoop.hive.metastore.txn.TxnUtils;
+import org.apache.hadoop.hive.metastore.txn.TxnCommonUtils;
 import org.apache.hadoop.hive.metastore.utils.FileUtils;
 import org.apache.impala.catalog.CatalogException;
 import org.apache.impala.catalog.CatalogServiceCatalog;
@@ -90,6 +92,8 @@ import org.apache.impala.util.MetaStoreUtil.TableInsertEventInfo;
 import org.apache.thrift.TException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.hive.metastore.messaging.MessageEncoder;
+import org.apache.hadoop.hive.metastore.messaging.MessageSerializer;
 
 /**
  * A wrapper around some of Hive's Metastore API's to abstract away differences
@@ -141,7 +145,7 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
     public static List<ColumnStatisticsObj> getTableColumnStatistics(
             IMetaStoreClient client, String dbName, String tableName, List<String> colNames)
             throws NoSuchObjectException, MetaException, TException {
-        return client.getTableColumnStatistics(dbName, tableName, colNames);
+        return client.getTableColumnStatistics(dbName, tableName, colNames, "impala");
     }
 
     /**
@@ -152,7 +156,7 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
                                                       String dbName, String tableName, String colName)
             throws NoSuchObjectException, MetaException, InvalidObjectException, TException,
             InvalidInputException {
-        return client.deleteTableColumnStatistics(dbName, tableName, colName);
+        return client.deleteTableColumnStatistics(dbName, tableName, colName, "impala");
     }
 
     /**
@@ -189,12 +193,22 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
         }
     }
 
+    private static final MessageEncoder eventMessageEncoder_ =
+            MessageFactory.getDefaultInstance(MetastoreConf.newMetastoreConf());
     /**
      * Wrapper method which returns HMS-3 Message factory in case Impala is
-     * building against Apache Hive-3
+     * building against Hive-3
      */
     public static MessageDeserializer getMessageDeserializer() {
-        return MessageFactory.getInstance().getDeserializer();
+        return eventMessageEncoder_.getDeserializer();
+    }
+
+    /**
+     * Wrapper around HMS-3 message encoder to get the serializer
+     * @return
+     */
+    public static MessageSerializer getMessageSerializer() {
+        return eventMessageEncoder_.getSerializer();
     }
 
     /**
@@ -216,7 +230,7 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
     public static AlterTableMessage buildAlterTableMessage(Table before, Table after,
                                                            boolean isTruncateOp, long writeId) {
         return JSONMessageFactory.getInstance().buildAlterTableMessage(before, after,
-                isTruncateOp);
+                isTruncateOp, writeId);
     }
 
     /**
@@ -242,7 +256,7 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
         List<String> tablesList = Collections.singletonList(tableFullName);
         List<TableValidWriteIds> writeIdList = client
                 .getValidWriteIds(tablesList, txns.toString());
-        return TxnUtils.createValidReaderWriteIdList(writeIdList.get(0));
+        return TxnCommonUtils.createValidReaderWriteIdList(writeIdList.get(0));
     }
 
     /**
