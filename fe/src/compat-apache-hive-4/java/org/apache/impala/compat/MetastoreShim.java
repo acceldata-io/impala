@@ -94,6 +94,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hive.metastore.messaging.MessageEncoder;
 import org.apache.hadoop.hive.metastore.messaging.MessageSerializer;
+import org.apache.hadoop.hive.metastore.utils.MetaStoreServerUtils;
 
 /**
  * A wrapper around some of Hive's Metastore API's to abstract away differences
@@ -230,7 +231,7 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
     public static AlterTableMessage buildAlterTableMessage(Table before, Table after,
                                                            boolean isTruncateOp, long writeId) {
         return JSONMessageFactory.getInstance().buildAlterTableMessage(before, after,
-                isTruncateOp, writeId);
+                 writeId);
     }
 
     /**

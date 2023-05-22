@@ -181,7 +181,7 @@ public class Hive4MetastoreShimBase {
    */
   public static void updatePartitionStatsFast(Partition partition, org.apache.hadoop.hive.metastore.api.Table tbl,
       Warehouse warehouse) throws MetaException {
-    MetaStoreUtils.updatePartitionStatsFast(partition, tbl, warehouse, /*madeDir*/false,
+    MetaStoreServerUtils.updatePartitionStatsFast(partition, tbl, warehouse, /*madeDir*/false,
         /*forceRecompute*/false,
         /*environmentContext*/null, /*isCreate*/false);
   }
