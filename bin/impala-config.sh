@@ -428,7 +428,7 @@ else
 fi
 # Set the path to the hive_metastore.thrift which is used to build thrift code
 export HIVE_METASTORE_THRIFT_DIR=${HIVE_METASTORE_THRIFT_DIR_OVERRIDE:-\
-"$HIVE_SRC_DIR/standalone-metastore/src/main/thrift"}
+"$HIVE_SRC_DIR/standalone-metastore/metastore-common/src/main/thrift"}
 export TEZ_HOME="$CDP_COMPONENTS_HOME/tez-${IMPALA_TEZ_VERSION}-minimal"
 export HBASE_HOME="$CDP_COMPONENTS_HOME/hbase-${IMPALA_HBASE_VERSION}/"
 # Set the Hive binaries in the path
