@@ -95,7 +95,7 @@ public class Hive4MetastoreShimBase {
    * transaction if txnId is not valid.
    */
   public static TblTransaction createTblTransaction(
-      IMetaStoreClient client, Table tbl, long txnId)
+      IMetaStoreClient client, org.apache.hadoop.hive.metastore.api.Table tbl, long txnId)
       throws TransactionException {
     TblTransaction tblTxn = new TblTransaction();
     try {
@@ -105,9 +105,9 @@ public class Hive4MetastoreShimBase {
       }
       tblTxn.txnId = txnId;
       tblTxn.writeId =
-          allocateTableWriteId(client, txnId, tbl.getDb().getName(), tbl.getTableName());
+          allocateTableWriteId(client, txnId, tbl.getDbName(), tbl.getTableName());
       tblTxn.validWriteIds =
-          getValidWriteIdListInTxn(client, tbl.getDb().getName(), tbl.getTableName(), txnId);
+          getValidWriteIdListInTxn(client, tbl.getDbName(), tbl.getTableName(), txnId);
       return tblTxn;
     } catch (TException e) {
       if (tblTxn.ownsTxn) {
@@ -151,7 +151,7 @@ public class Hive4MetastoreShimBase {
   public static void alterPartition(IMetaStoreClient client, Partition partition)
       throws InvalidOperationException, MetaException, TException {
     client.alter_partition(
-        partition.getDb().getName(), partition.getTableName(), partition, null);
+        partition.getDbName(), partition.getTableName(), partition, null);
   }
 
   /**
@@ -169,9 +169,9 @@ public class Hive4MetastoreShimBase {
    * defaultConstraints, and checkConstraints.
    */
   public static void createTableWithConstraints(IMetaStoreClient client,
-      Table newTbl, List<SQLPrimaryKey> primaryKeys, List<SQLForeignKey> foreignKeys)
+     org.apache.hadoop.hive.metastore.api.Table newTbl, List<SQLPrimaryKey> primaryKeys, List<SQLForeignKey> foreignKeys)
       throws InvalidOperationException, MetaException, TException {
-    client.createTableWithConstraints(newTbl.getMetaStoreTable(), primaryKeys, foreignKeys, null, null,
+    client.createTableWithConstraints(newTbl, primaryKeys, foreignKeys, null, null,
         null, null);
   }
 
@@ -179,7 +179,7 @@ public class Hive4MetastoreShimBase {
    * Wrapper around MetaStoreUtils.updatePartitionStatsFast() to deal with added
    * arguments.
    */
-  public static void updatePartitionStatsFast(Partition partition, Table tbl,
+  public static void updatePartitionStatsFast(Partition partition, org.apache.hadoop.hive.metastore.api.Table tbl,
       Warehouse warehouse) throws MetaException {
     MetaStoreUtils.updatePartitionStatsFast(partition, tbl, warehouse, /*madeDir*/false,
         /*forceRecompute*/false,
@@ -295,7 +295,7 @@ public class Hive4MetastoreShimBase {
    *
    * @return
    */
-  public static String getTableInformation(Table table) {
+  public static String getTableInformation(org.apache.hadoop.hive.metastore.api.Table table) {
     return HiveMetadataFormatUtils.getTableInformation(table, false);
   }
 
@@ -751,7 +751,7 @@ public class Hive4MetastoreShimBase {
    * location will be under "metastore.warehouse.external.dir" (HIVE-19837, introduces in
    * hive-2.7, not in hive-2.1.x-cdh6.x yet).
    */
-  public static String getPathForNewTable(Database db, Table tbl)
+  public static String getPathForNewTable(Database db, org.apache.hadoop.hive.metastore.api.Table tbl)
       throws MetaException {
     Warehouse wh = new Warehouse(new HiveConf());
     // Non transactional tables are all translated to external tables by HMS's default
