@@ -65,7 +65,7 @@ import org.apache.hadoop.hive.metastore.messaging.EventMessage;
 import org.apache.hadoop.hive.metastore.messaging.MessageDeserializer;
 import org.apache.hadoop.hive.metastore.messaging.MessageFactory;
 import org.apache.hadoop.hive.metastore.messaging.json.JSONDropDatabaseMessage;
-import org.apache.hive.hcatalog.messaging.json.JSONMessageFactory;
+import org.apache.hadoop.hive.metastore.messaging.MessageBuilder;
 import org.apache.hadoop.hive.metastore.txn.TxnUtils;
 import org.apache.hadoop.hive.metastore.txn.TxnCommonUtils;
 import org.apache.hadoop.hive.metastore.utils.FileUtils;
@@ -230,8 +230,8 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
     @VisibleForTesting
     public static AlterTableMessage buildAlterTableMessage(Table before, Table after,
                                                            boolean isTruncateOp, long writeId) {
-        return JSONMessageFactory.getInstance().buildAlterTableMessage(before, after,
-                 writeId);
+        return MessageBuilder.getInstance().buildAlterTableMessage(before, after,
+                isTruncateOp, writeId);
     }
 
     /**
