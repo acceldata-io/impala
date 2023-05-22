@@ -494,6 +494,10 @@ under the License.
           <groupId>org.apache.hadoop</groupId>
           <artifactId>*</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.apache.ant</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -510,6 +514,10 @@ under the License.
         <exclusion>
           <groupId>org.apache.logging.log4j</groupId>
           <artifactId>log4j-1.2-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.ant</groupId>
+          <artifactId>*</artifactId>
         </exclusion>
         <!-- Exclude json-smart to pin the version -->
         <exclusion>
@@ -544,6 +552,10 @@ under the License.
         <exclusion>
           <groupId>org.apache.logging.log4j</groupId>
           <artifactId>log4j-1.2-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.ant</groupId>
+          <artifactId>*</artifactId>
         </exclusion>
         <!-- Exclude json-smart to pin the version -->
         <exclusion>
