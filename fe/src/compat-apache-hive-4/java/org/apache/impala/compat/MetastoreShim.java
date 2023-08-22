@@ -96,6 +96,25 @@ import org.apache.hadoop.hive.metastore.messaging.MessageEncoder;
 import org.apache.hadoop.hive.metastore.messaging.MessageSerializer;
 import org.apache.hadoop.hive.metastore.utils.MetaStoreServerUtils;
 
+import org.apache.impala.catalog.TableNotFoundException;
+import org.apache.impala.catalog.TableNotFoundException;  
+import org.apache.impala.catalog.TableNotLoadedException; 
+import org.apache.impala.catalog.TableWriteId;
+import org.apache.impala.catalog.DatabaseNotFoundException;
+import org.apache.hadoop.hive.metastore.utils.MetaStoreUtils;
+import java.util.stream.Collectors;
+import org.apache.impala.analysis.TableName;
+import java.util.HashMap;
+import java.util.Set;
+import org.apache.impala.catalog.events.MetastoreEvents.MetastoreEventType; 
+import org.apache.impala.catalog.events.MetastoreEventsProcessor;
+import org.apache.hadoop.hive.metastore.api.WriteEventInfo; 
+import org.apache.hadoop.hive.metastore.api.WriteNotificationLogRequest;
+import org.apache.hadoop.hive.metastore.api.GetAllWriteEventInfoRequest;  
+import org.apache.impala.catalog.events.MetastoreNotificationNeedsInvalidateException;
+import org.apache.hadoop.hive.metastore.messaging.CommitTxnMessage; 
+import org.apache.impala.hive.common.MutableValidWriteIdList; 
+
 /**
  * A wrapper around some of Hive's Metastore API's to abstract away differences
  * between major versions of different Hive publishers. This implements the shimmed
@@ -602,17 +621,96 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
      * CDP Hive-3 only function.
      */
     public static class CommitTxnEvent extends MetastoreEvent {
-
+	 private final CommitTxnMessage commitTxnMessage_;
+	 private final long txnId_;
         public CommitTxnEvent(CatalogOpExecutor catalogOpExecutor, Metrics metrics,
                               NotificationEvent event) {
             super(catalogOpExecutor, metrics, event);
-            throw new UnsupportedOperationException("CommitTxnEvent is not supported.");
+            LOG.info("shim-2: After suprt call");
+          //  throw new UnsupportedOperationException("CommitTxnEvent is not supported.");
+                Preconditions.checkState(getEventType().equals(MetastoreEventType.COMMIT_TXN));
+	        Preconditions.checkNotNull(event.getMessage());
+      		commitTxnMessage_ = MetastoreEventsProcessor.getMessageDeserializer()
+          	.getCommitTxnMessage(event.getMessage());
+      		txnId_ = commitTxnMessage_.getTxnId();
         }
 
         @Override
         protected void process() throws MetastoreNotificationException {
+		      Set<TableWriteId> committedWriteIds = catalog_.removeWriteIds(txnId_);
+      List<WriteEventInfo> writeEventInfoList;
+      try (MetaStoreClientPool.MetaStoreClient client = catalog_.getMetaStoreClient()) {
+        writeEventInfoList = client.getHiveClient().getAllWriteEventInfo(
+            new GetAllWriteEventInfoRequest(txnId_));
+      } catch (TException e) {
+        throw new MetastoreNotificationNeedsInvalidateException(debugString("Failed to "
+            + "get write event infos for txn {}. Event processing cannot continue. Issue "
+            + "an invalidate metadata command to reset event processor.", txnId_), e);
+      }
 
+      try {
+        if (writeEventInfoList != null && !writeEventInfoList.isEmpty()) {
+          commitTxnMessage_.addWriteEventInfo(writeEventInfoList);
+          addCommittedWriteIdsAndRefreshPartitions();
         }
+        addCommittedWriteIdsToTables(committedWriteIds);
+      } catch (Exception e) {
+        throw new MetastoreNotificationNeedsInvalidateException(debugString("Failed to "
+            + "mark committed write ids and refresh partitions for txn {}. Event "
+            + "processing cannot continue. Issue an invalidate metadata command to reset "
+            + "event processor.", txnId_), e);
+      }
+    }
+    private void addCommittedWriteIdsToTables(Set<TableWriteId> tableWriteIds)
+        throws CatalogException {
+      for (TableWriteId tableWriteId: tableWriteIds) {
+        catalog_.addWriteIdsToTable(tableWriteId.getDbName(), tableWriteId.getTblName(),
+            getEventId(),
+            Collections.singletonList(tableWriteId.getWriteId()),
+            MutableValidWriteIdList.WriteIdStatus.COMMITTED);
+      }
+    }
+
+	private void addCommittedWriteIdsAndRefreshPartitions() throws Exception {
+      Preconditions.checkNotNull(commitTxnMessage_.getWriteIds());
+      List<Long> writeIds = Collections.unmodifiableList(commitTxnMessage_.getWriteIds());
+      List<Partition> parts = new ArrayList<>();
+      Map<TableName, List<Integer>> tableNameToIdxs = new HashMap<>();
+      for (int i = 0; i < writeIds.size(); i++) {
+        org.apache.hadoop.hive.metastore.api.Table tbl = commitTxnMessage_.getTableObj(i);
+        TableName tableName = new TableName(tbl.getDbName(), tbl.getTableName());
+        parts.add(commitTxnMessage_.getPartitionObj(i));
+        tableNameToIdxs.computeIfAbsent(tableName, k -> new ArrayList<>()).add(i);
+      }
+      for (Map.Entry<TableName, List<Integer>> entry : tableNameToIdxs.entrySet()) {
+        org.apache.hadoop.hive.metastore.api.Table tbl =
+            commitTxnMessage_.getTableObj(entry.getValue().get(0));
+        List<Long> writeIdsForTable = entry.getValue().stream()
+            .map(i -> writeIds.get(i))
+            .collect(Collectors.toList());
+        List<Partition> partsForTable = entry.getValue().stream()
+            .map(i -> parts.get(i))
+            .collect(Collectors.toList());
+        if (tbl.getPartitionKeysSize() > 0
+            && !MetaStoreUtils.isMaterializedViewTable(tbl)) {
+          try {
+            catalogOpExecutor_.addCommittedWriteIdsAndReloadPartitionsIfExist(
+                getEventId(), entry.getKey().getDb(), entry.getKey().getTbl(),
+                writeIdsForTable, partsForTable, "Processing event id: " +
+                            getEventId() + ", event type: " + getEventType());
+          } catch (TableNotLoadedException e) {
+            debugLog("Ignoring reloading since table {} is not loaded",
+                entry.getKey());
+          } catch (DatabaseNotFoundException | TableNotFoundException e) {
+            debugLog("Ignoring reloading since table {} is not found",
+                entry.getKey());
+          }
+        } else {
+          catalog_.reloadTableIfExists(entry.getKey().getDb(), entry.getKey().getTbl(),
+               "CommitTxnEvent", getEventId());
+        }
+      }
+    }
 
         @Override
         protected boolean isEventProcessingDisabled() {
