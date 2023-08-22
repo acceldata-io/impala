@@ -165,6 +165,7 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
      */
     public static ColumnStatistics createNewHiveColStats() {
         ColumnStatistics colStats = new ColumnStatistics();
+        colStats.setEngine(IMPALA_ENGINE);
         return colStats;
     }
 
