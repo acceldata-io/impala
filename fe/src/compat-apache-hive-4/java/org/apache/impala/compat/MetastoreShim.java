@@ -606,16 +606,17 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
         public CommitTxnEvent(CatalogOpExecutor catalogOpExecutor, Metrics metrics,
                               NotificationEvent event) {
             super(catalogOpExecutor, metrics, event);
+            throw new UnsupportedOperationException("CommitTxnEvent is not supported.");
         }
 
         @Override
         protected void process() throws MetastoreNotificationException {
-		throw new MetastoreNotificationException("CommitTxnEvent is not supported.");
+
         }
 
         @Override
         protected boolean isEventProcessingDisabled() {
-            return true;
+            return false;
         }
 
         @Override
@@ -625,7 +626,7 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
 
         @Override
         protected boolean shouldSkipWhenSyncingToLatestEventId() {
-            return true;
+            return false;
         }
     }
 
