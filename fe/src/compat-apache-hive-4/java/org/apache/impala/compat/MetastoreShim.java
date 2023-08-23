@@ -625,9 +625,7 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
 	 private final long txnId_;
         public CommitTxnEvent(CatalogOpExecutor catalogOpExecutor, Metrics metrics,
                               NotificationEvent event) {
-            super(catalogOpExecutor, metrics, event);
-            LOG.info("shim-2: After suprt call");
-          //  throw new UnsupportedOperationException("CommitTxnEvent is not supported.");
+	        super(catalogOpExecutor, metrics, event);
                 Preconditions.checkState(getEventType().equals(MetastoreEventType.COMMIT_TXN));
 	        Preconditions.checkNotNull(event.getMessage());
       		commitTxnMessage_ = MetastoreEventsProcessor.getMessageDeserializer()
