@@ -115,6 +115,13 @@ import org.apache.impala.catalog.events.MetastoreNotificationNeedsInvalidateExce
 import org.apache.hadoop.hive.metastore.messaging.CommitTxnMessage; 
 import org.apache.impala.hive.common.MutableValidWriteIdList; 
 import org.apache.hadoop.hive.metastore.api.SetPartitionsStatsRequest;
+import org.apache.hadoop.hive.metastore.api.GetLatestCommittedCompactionInfoRequest;
+import org.apache.hadoop.hive.metastore.api.GetLatestCommittedCompactionInfoResponse;
+import org.apache.impala.catalog.CompactionInfoLoader;
+import org.apache.impala.catalog.MetaStoreClientPool;
+import org.apache.impala.catalog.MetaStoreClientPool.MetaStoreClient;
+import org.apache.hadoop.hive.metastore.api.CompactionInfoStruct;
+import com.google.common.collect.Iterables;
 
 /**
  * A wrapper around some of Hive's Metastore API's to abstract away differences
@@ -620,8 +627,52 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
      */
     public static List<HdfsPartition.Builder> getPartitionsForRefreshingFileMetadata(
             CatalogServiceCatalog catalog, HdfsTable hdfsTable) throws CatalogException {
-        throw new UnsupportedOperationException(
-                "getPartitionsForRefreshingFileMetadata is not supported.");
+	    List<HdfsPartition.Builder> partBuilders = new ArrayList<>();
+	    GetLatestCommittedCompactionInfoRequest request =
+	        new GetLatestCommittedCompactionInfoRequest(
+	            hdfsTable.getDb().getName(), hdfsTable.getName());
+	    if (hdfsTable.getLastCompactionId() > 0) {
+	      request.setLastCompactionId(hdfsTable.getLastCompactionId());
+	    }
+
+	    GetLatestCommittedCompactionInfoResponse response;
+	    try (MetaStoreClientPool.MetaStoreClient client = catalog.getMetaStoreClient()) {
+	      response = CompactionInfoLoader.getLatestCompactionInfo(client, request);
+	    } catch (Exception e) {
+	      throw new CatalogException("Error getting latest compaction info for "
+	          + hdfsTable.getFullName(), e);
+	    }
+
+	    Map<String, Long> partNameToCompactionId = new HashMap<>();
+	    if (hdfsTable.isPartitioned()) {
+	      for (CompactionInfoStruct ci : response.getCompactions()) {
+	        if (ci.getPartitionname() != null) {
+	          partNameToCompactionId.put(ci.getPartitionname(), ci.getId());
+	        } else {
+	          LOG.warn(
+	              "Partitioned table {} has null partitionname in CompactionInfoStruct: {}",
+	              hdfsTable.getFullName(), ci.toString());
+	        }
+	      }
+	    } else {
+	      CompactionInfoStruct ci = Iterables.getOnlyElement(response.getCompactions(), null);
+	      if (ci != null) {
+	        partNameToCompactionId.put(HdfsTable.DEFAULT_PARTITION_NAME, ci.getId());
+	      }
+	    }
+
+	    for (HdfsPartition partition : hdfsTable.getPartitionsForNames(
+	        partNameToCompactionId.keySet())) {
+	      long latestCompactionId = partNameToCompactionId.get(partition.getPartitionName());
+	      HdfsPartition.Builder builder = new HdfsPartition.Builder(partition);
+	      LOG.debug(
+	          "Cached compaction id for {} partition {}: {} but the latest compaction id: {}",
+	          hdfsTable.getFullName(), partition.getPartitionName(),
+	          partition.getLastCompactionId(), latestCompactionId);
+	      builder.setLastCompactionId(latestCompactionId);
+	      partBuilders.add(builder);
+	    }
+	    return partBuilders;
     }
 
     /**
