@@ -612,7 +612,7 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
      */
     public static void addToSubDirectoryList(InsertEventRequestData insertEventRequestData,
                                              String acidDirPath) {
-        throw new UnsupportedOperationException("addToSubDirectoryList is not supported.");
+		 insertEventRequestData.addToSubDirectoryList(acidDirPath);
     }
 
     /**
