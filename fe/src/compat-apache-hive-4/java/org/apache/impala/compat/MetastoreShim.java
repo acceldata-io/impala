@@ -144,8 +144,15 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
     public static void alterTableWithTransaction(IMetaStoreClient client,
                                                  Table tbl, TblTransaction tblTxn)
             throws ImpalaRuntimeException {
-        throw new UnsupportedOperationException(
-                "alterTableWithTransaction is not supported.");
+      tbl.setWriteId(tblTxn.writeId);
+      try {
+        client.alter_table(null, tbl.getDbName(), tbl.getTableName(),
+          tbl, null, tblTxn.validWriteIds);
+      }
+      catch (TException e) {
+        throw new ImpalaRuntimeException(
+            String.format(HMS_RPC_ERROR_FORMAT_STR, "alter_table"), e);
+      }
     }
 
     /**
