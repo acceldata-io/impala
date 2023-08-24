@@ -161,8 +161,13 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
     public static void alterPartitionsWithTransaction(IMetaStoreClient client,
                                                       String dbName, String tblName, List<Partition> partitions, TblTransaction tblTxn
     ) throws InvalidOperationException, MetaException, TException {
-        throw new UnsupportedOperationException(
-                "alterPartitionsWithTransaction is not supported.");
+      for (Partition part : partitions) {
+        part.setWriteId(tblTxn.writeId);
+      }
+    // Correct validWriteIdList is needed
+    // to commit the alter partitions operation in hms side.
+      client.alter_partitions(dbName, tblName, partitions, null,
+      tblTxn.validWriteIds, tblTxn.writeId);
     }
 
     /**
