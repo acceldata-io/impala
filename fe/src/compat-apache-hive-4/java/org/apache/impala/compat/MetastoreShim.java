@@ -114,6 +114,7 @@ import org.apache.hadoop.hive.metastore.api.GetAllWriteEventInfoRequest;
 import org.apache.impala.catalog.events.MetastoreNotificationNeedsInvalidateException;
 import org.apache.hadoop.hive.metastore.messaging.CommitTxnMessage; 
 import org.apache.impala.hive.common.MutableValidWriteIdList; 
+import org.apache.hadoop.hive.metastore.api.SetPartitionsStatsRequest;
 
 /**
  * A wrapper around some of Hive's Metastore API's to abstract away differences
@@ -404,8 +405,21 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
     public static void setTableColumnStatsTransactional(IMetaStoreClient client,
                                                         Table msTbl, ColumnStatistics colStats, TblTransaction tblTxn)
             throws ImpalaRuntimeException {
-        throw new UnsupportedOperationException(
-                "setTableColumnStatsTransactional is not supported.");
+      List<ColumnStatistics> colStatsList = new ArrayList<>();
+      colStatsList.add(colStats);
+      SetPartitionsStatsRequest request = new SetPartitionsStatsRequest();
+      request.setColStats(colStatsList);
+      request.setWriteId(tblTxn.writeId);
+      request.setValidWriteIdList(tblTxn.validWriteIds);
+      try {
+        // Despite its name, the function below can and (and currently must) be used
+        // to set table level column statistics in transactional tables.
+        client.setPartitionColumnStatistics(request);
+      }
+      catch (TException e) {
+        throw new ImpalaRuntimeException(
+            String.format(HMS_RPC_ERROR_FORMAT_STR, "setPartitionColumnStatistics"), e);
+      }
     }
 
     /**
