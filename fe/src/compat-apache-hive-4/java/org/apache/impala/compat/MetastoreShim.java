@@ -122,6 +122,8 @@ import org.apache.impala.catalog.MetaStoreClientPool;
 import org.apache.impala.catalog.MetaStoreClientPool.MetaStoreClient;
 import org.apache.hadoop.hive.metastore.api.CompactionInfoStruct;
 import com.google.common.collect.Iterables;
+import org.apache.hadoop.hive.metastore.api.InsertEventRequestData;
+import org.apache.hadoop.hive.metastore.api.WriteNotificationLogRequest;
 
 /**
  * A wrapper around some of Hive's Metastore API's to abstract away differences
@@ -471,8 +473,22 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
     private static void fireInsertTransactionalEventHelper(
             IMetaStoreClient hiveClient, TableInsertEventInfo insertEventInfo, String dbName,
             String tableName) throws TException {
-        throw new UnsupportedOperationException(
-                "fireInsertTransactionalEventHelper is not supported.");
+	    for (InsertEventRequestData insertData : insertEventInfo.getInsertEventReqData()) {
+	      if (LOG.isDebugEnabled()) {
+	        String msg =
+	            "Firing write notification log request for table " + dbName + "." + tableName
+	                + (insertData.isSetPartitionVal() ? " on partition " + insertData
+	                .getPartitionVal() : "");
+	        LOG.debug(msg);
+	      }
+	      WriteNotificationLogRequest rqst = new WriteNotificationLogRequest(
+	          insertEventInfo.getTxnId(), insertEventInfo.getWriteId(), dbName, tableName,
+	          insertData);
+	      if (insertData.isSetPartitionVal()) {
+	        rqst.setPartitionVals(insertData.getPartitionVal());
+	      }
+	      hiveClient.addWriteNotificationLog(rqst);
+	    }
     }
 
     /**
