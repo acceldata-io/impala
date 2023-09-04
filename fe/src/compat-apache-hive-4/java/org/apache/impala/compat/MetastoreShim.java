@@ -145,6 +145,7 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
 
     private static final String CONNECTORREAD = "CONNECTORREAD";
     private static final String CONNECTORWRITE = "CONNECTORWRITE";
+    public static final String IMPALA_ENGINE = "impala";
 
     private static List<String> processorCapabilities = Lists.newArrayList();
 
@@ -187,7 +188,7 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
     public static List<ColumnStatisticsObj> getTableColumnStatistics(
             IMetaStoreClient client, String dbName, String tableName, List<String> colNames)
             throws NoSuchObjectException, MetaException, TException {
-        return client.getTableColumnStatistics(dbName, tableName, colNames, "impala");
+        return client.getTableColumnStatistics(dbName, tableName, colNames, /*engine*/IMPALA_ENGINE);
     }
 
     /**
@@ -198,7 +199,7 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
                                                       String dbName, String tableName, String colName)
             throws NoSuchObjectException, MetaException, InvalidObjectException, TException,
             InvalidInputException {
-        return client.deleteTableColumnStatistics(dbName, tableName, colName, "impala");
+        return client.deleteTableColumnStatistics(dbName, tableName, colName, /*engine*/IMPALA_ENGINE);
     }
 
     /**
@@ -206,6 +207,7 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
      */
     public static ColumnStatistics createNewHiveColStats() {
         ColumnStatistics colStats = new ColumnStatistics();
+	colStats.setEngine(IMPALA_ENGINE);
         return colStats;
     }
 
@@ -420,6 +422,7 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
       request.setColStats(colStatsList);
       request.setWriteId(tblTxn.writeId);
       request.setValidWriteIdList(tblTxn.validWriteIds);
+      request.setEngine(/*engine*/IMPALA_ENGINE);
       try {
         // Despite its name, the function below can and (and currently must) be used
         // to set table level column statistics in transactional tables.
