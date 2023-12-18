@@ -21,12 +21,14 @@ method.
 """
 
 import sys, os, zipimport, time, re, imp, types
-from urlparse import urlparse, urlunparse
 
-try:
-    frozenset
-except NameError:
+if sys.version_info >= (3, 0):
+    # Python 3
+    from urllib.parse import urlparse, urlunparse
+else:
+    from urlparse import urlparse, urlunparse
     from sets import ImmutableSet as frozenset
+    
 
 # capture these to bypass sandboxing
 from os import utime
@@ -49,7 +51,7 @@ from os.path import isdir, split
 # attribute is present to decide wether to reinstall the package
 _distribute = True
 
-def _bypass_ensure_directory(name, mode=0777):
+def _bypass_ensure_directory(name, mode=0o777):
     # Sandbox-bypassing version of ensure_directory()
     if not WRITE_SUPPORT:
         raise IOError('"os.mkdir" not supported on this platform.')
@@ -301,7 +303,7 @@ run_main = run_script   # backward compatibility
 
 def get_distribution(dist):
     """Return a current distribution object for a Requirement or string"""
-    if isinstance(dist,basestring): dist = Requirement.parse(dist)
+    if isinstance(dist,str): dist = Requirement.parse(dist)
     if isinstance(dist,Requirement): dist = get_provider(dist)
     if not isinstance(dist,Distribution):
         raise TypeError("Expected string, Requirement, or Distribution", dist)
@@ -993,7 +995,7 @@ variable to point to an accessible directory.
 
         if os.name == 'posix':
             # Make the resource executable
-            mode = ((os.stat(tempname).st_mode) | 0555) & 07777
+            mode = ((os.stat(tempname).st_mode) | 0o555) & 0o7777
             os.chmod(tempname, mode)
 
 
@@ -1211,7 +1213,7 @@ class NullProvider:
                 len(script_text), 0, script_text.split('\n'), script_filename
             )
             script_code = compile(script_text,script_filename,'exec')
-            exec script_code in namespace, namespace
+            exec(script_code , namespace)
 
     def _has(self, path):
         raise NotImplementedError(
@@ -1852,7 +1854,7 @@ def _set_parent_ns(packageName):
 
 def yield_lines(strs):
     """Yield non-empty/non-comment lines of a ``basestring`` or sequence"""
-    if isinstance(strs,basestring):
+    if isinstance(strs,str):
         for s in strs.splitlines():
             s = s.strip()
             if s and not s.startswith('#'):     # skip blank lines/comments
@@ -2228,7 +2230,7 @@ class Distribution(object):
     def __getattr__(self,attr):
         """Delegate all unrecognized public attributes to .metadata provider"""
         if attr.startswith('_'):
-            raise AttributeError,attr
+            raise AttributeError(attr)
         return getattr(self._provider, attr)
 
     #@classmethod
@@ -2307,8 +2309,8 @@ class Distribution(object):
 
         nloc = _normalize_cached(loc)
         bdir = os.path.dirname(nloc)
-        npath= map(_normalize_cached, path)
-
+        npath= list(map(_normalize_cached, path))
+        #npath_list = list(npath)
         bp = None
         for p, item in enumerate(npath):
             if item==nloc:
@@ -2528,9 +2530,9 @@ class Requirement:
 
     def __contains__(self,item):
         if isinstance(item,Distribution):
-            if item.key <> self.key: return False
+            if item.key!=self.key: return False
             if self.index: item = item.parsed_version  # only get if we need it
-        elif isinstance(item,basestring):
+        elif isinstance(item,str):
             item = parse_version(item)
         last = None
         compare = lambda a, b: (a > b) - (a < b) # -1, 0, 1

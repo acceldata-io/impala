@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -28,6 +28,14 @@ import sasl
 import ssl
 import sys
 import time
+
+import sys
+
+# Specify the directory containing the modules
+custom_module_path = '/usr/local/lib64/python3.8/site-packages'
+
+# Add the custom module path to the Python module search path
+sys.path.append(custom_module_path)
 
 from beeswaxd import BeeswaxService
 from beeswaxd.BeeswaxService import QueryState
