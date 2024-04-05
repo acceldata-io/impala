@@ -96,7 +96,7 @@ class TestCompressedFormatsBase(ImpalaTestSuite):
       assert result and int(result) > 0
     except Exception as e:
       error_msg = str(e)
-      print error_msg
+      print(error_msg)
       if expected_error is None or expected_error not in error_msg:
         print("Unexpected error:\n{0}".format(error_msg))
         raise

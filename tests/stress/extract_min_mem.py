@@ -46,4 +46,4 @@ with open(sys.argv[1]) as f:
                    runtime_info['required_mem_mb_with_spilling']))
 
 results.sort()
-print ', '.join(["'Q{0}': {1}".format(num, mem) for num, mem in results])
+print(', '.join(["'Q{0}': {1}".format(num, mem) for num, mem in results]))

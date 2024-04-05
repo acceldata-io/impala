@@ -47,9 +47,10 @@ if len(sys.argv) == 1 or sys.argv[1] == "-":
 elif len(sys.argv) == 2:
   input_data = file(sys.argv[1])
 else:
-  print >> sys.stderr, "Usage: %s [file]" % (sys.argv[0],)
+  #print >> sys.stderr, "Usage: %s [file]" % (sys.argv[0],)
+  sys.stderr.write("Usage: %s [file]" % (sys.argv[0]))
   sys.exit(1)
 
 for line in input_data:
   tree = profiles.decode_profile_line(line)
-  print tree
+  print(tree)

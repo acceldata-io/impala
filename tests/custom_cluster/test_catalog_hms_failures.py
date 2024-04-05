@@ -75,7 +75,7 @@ class TestHiveMetaStoreFailure(CustomClusterTestSuite):
     try:
       self.client.execute("describe %s" % tbl_name)
     except ImpalaBeeswaxException as e:
-      print str(e)
+      print(str(e))
       assert "Failed to load metadata for table: %s. Running 'invalidate metadata %s' "\
           "may resolve this problem." % (tbl_name, tbl_name) in str(e)
     self.run_hive_server()

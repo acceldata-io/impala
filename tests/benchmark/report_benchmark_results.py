@@ -1150,5 +1150,5 @@ if __name__ == "__main__":
     if ref_grouped:
       ref_impala_version = get_impala_version(ref_grouped)
 
-  print build_summary_header(current_impala_version, ref_impala_version)
-  print report
+  print(build_summary_header(current_impala_version, ref_impala_version))
+  print(report)

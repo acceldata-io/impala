@@ -229,6 +229,6 @@ if __name__ == "__main__":
   comments = get_flake8_comments(revision)
   merge_comments(comments, get_misc_comments(revision))
   review_input = {"comments": comments}
-  print json.dumps(review_input, indent=True)
+  print(json.dumps(review_input, indent=True))
   if not args.dryrun:
     post_review_to_gerrit(review_input)

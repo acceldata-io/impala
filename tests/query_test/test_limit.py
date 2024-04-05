@@ -79,5 +79,5 @@ class TestLimitBase(ImpalaTestSuite):
     except ImpalaBeeswaxException as e:
       assert not should_succeed, 'Query was not expected to fail: %s' % e
       if (expected_error not in str(e)):
-        print str(e)
+        print(str(e))
       assert expected_error in str(e)

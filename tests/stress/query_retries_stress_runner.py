@@ -343,9 +343,9 @@ When specifying a non-default scale, the job will look for a database of the for
     sys.exit(1)
 
   # Set the correct database.
-  if table_format is 'parquet':
+  if table_format == 'parquet':
     database = workload + scale + '_parquet'
-  elif workload is 'text':
+  elif workload == 'text':
     database = workload + scale
   else:
     parser.print_usage()

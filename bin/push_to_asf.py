@@ -87,13 +87,13 @@ def confirm_prompt(prompt):
   if the user confirms.
   """
   while True:
-    print prompt, "[Y/n]:",
+    print (prompt+ " [Y/n]:")
 
     if not os.isatty(sys.stdout.fileno()):
-      print "Not running interactively. Assuming 'N'."
+      print("Not running interactively. Assuming 'N'.")
       return False
 
-    r = raw_input().strip().lower()
+    r = input().strip().lower()
     if r in ['y', 'yes', '']:
       return True
     elif r in ['n', 'no']:
@@ -223,28 +223,28 @@ def do_update(branch, gerrit_sha, apache_sha):
   # can verify and "sign off".
   commits = rev_list("%s..%s" % (apache_sha, gerrit_sha))
   commits.reverse()  # Display from oldest to newest.
-  print "-" * 60
-  print Colors.GREEN + ("%d commit(s) need to be pushed from Gerrit to ASF:" %\
-      len(commits)) + Colors.RESET
+  print("-" * 60)
+  print(Colors.GREEN + ("%d commit(s) need to be pushed from Gerrit to ASF:" %\
+      len(commits)) + Colors.RESET)
   push_sha = None
   for sha in commits:
     oneline = describe_commit(sha)
-    print "  ", oneline
+    print("  ", oneline)
     committer = get_committer_email(sha)
     if committer != get_my_email():
-      print Colors.RED + "   !!! Committed by someone else (%s) !!!" %\
-          committer, Colors.RESET
+      print(Colors.RED + "   !!! Committed by someone else (%s) !!!" %\
+          committer, Colors.RESET)
       if not confirm_prompt(Colors.RED +\
           "   !!! Are you sure you want to push on behalf of another committer?" +\
           Colors.RESET):
         # Even if they don't want to push this commit, we could still push any
         # earlier commits that the user _did_ author.
         if push_sha is not None:
-          print "... will still update to prior commit %s..." % push_sha
+          print("... will still update to prior commit %s..." % push_sha)
         break
     push_sha = sha
   if push_sha is None:
-    print "Nothing to push"
+    print("Nothing to push")
     return
 
   # Everything has been confirmed. Do the actual push
@@ -252,11 +252,11 @@ def do_update(branch, gerrit_sha, apache_sha):
   if OPTIONS.dry_run:
     cmd.append('--dry-run')
   cmd.append('%s:refs/heads/%s' % (push_sha, branch))
-  print Colors.GREEN + "Running: " + Colors.RESET + " ".join(cmd)
+  print(Colors.GREEN + "Running: " + Colors.RESET + " ".join(cmd))
   subprocess.check_call(cmd)
-  print Colors.GREEN + "Successfully updated %s to %s" % (branch, gerrit_sha) +\
-      Colors.RESET
-  print
+  print(Colors.GREEN + "Successfully updated %s to %s" % (branch, gerrit_sha) +\
+      Colors.RESET)
+  print()
 
 
 def main():
@@ -295,14 +295,14 @@ def main():
   apache_branches = get_branches(OPTIONS.apache_remote)
   for branch, apache_sha in sorted(apache_branches.iteritems()):
     gerrit_sha = rev_parse("remotes/" + OPTIONS.gerrit_remote + "/" + branch)
-    print "Branch '%s':\t" % branch,
+    print("Branch '%s':\t" % branch)
     if gerrit_sha is None:
-      print Colors.YELLOW, "found on Apache but not in gerrit", Colors.RESET
+      print(Colors.YELLOW, "found on Apache but not in gerrit", Colors.RESET)
       continue
     if gerrit_sha == apache_sha:
-      print Colors.GREEN, "up to date", Colors.RESET
+      print(Colors.GREEN, "up to date", Colors.RESET)
       continue
-    print Colors.YELLOW, "needs update", Colors.RESET
+    print(Colors.YELLOW, "needs update", Colors.RESET)
     do_update(branch, gerrit_sha, apache_sha)
 
 

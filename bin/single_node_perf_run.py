@@ -208,7 +208,7 @@ def backup_workloads():
   temp_dir = mkdtemp()
   sh.cp(os.path.join(IMPALA_HOME, "testdata", "workloads"),
         temp_dir, R=True, _out=sys.stdout, _err=sys.stderr)
-  print "Backed up workloads to {0}".format(temp_dir)
+  print("Backed up workloads to {0}".format(temp_dir))
   return temp_dir
 
 

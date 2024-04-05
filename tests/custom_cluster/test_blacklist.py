@@ -226,7 +226,7 @@ class TestBlacklistFaultyDisk(CustomClusterTestSuite):
       dir_path = tempfile.mkdtemp()
       self.created_dirs.append(dir_path)
       result.append(dir_path)
-      print "Generated dir" + dir_path
+      print("Generated dir" + dir_path)
     return result
 
   def setup_method(self, method):

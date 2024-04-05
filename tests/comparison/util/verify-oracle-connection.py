@@ -56,7 +56,7 @@ def main():
     finally:
       cursor.close()
     assert rows == EXPECTED_RESULT
-  print 'success'
+  print('success')
 
 
 if '__main__' == __name__:

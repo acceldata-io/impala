@@ -148,4 +148,4 @@ class AcidTxn(object):
         try:
           self.commit_txn(txn)
         except Exception as e:
-          print str(e)
+          print(str(e))

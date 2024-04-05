@@ -474,7 +474,7 @@ class TestKuduOperations(KuduTestSuite):
                 date(2010, 1, 1), '')]
         i += 1
     cursor.execute("select count(*) from %s" % table_name)
-    print cursor.fetchall() == [(i, )]
+    print(cursor.fetchall() == [(i, )])
 
   def test_concurrent_schema_change(self, cursor, unique_database):
     """Tests that an insert into a Kudu table with a concurrent schema change either

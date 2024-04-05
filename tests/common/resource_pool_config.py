@@ -94,7 +94,7 @@ class ResourcePoolConfig(object):
         if pool_name == name.split('.')[-1] and pool_attribute in name:
           return property
       except Exception as e:
-        print "Current DOM element being inspected: \n{0}".format(ET.dump(property))
+        print("Current DOM element being inspected: \n{0}".format(ET.dump(property)))
         raise e
     assert False, "{0} attribute not found for pool {1} in the config XML:\n{2}".format(
       pool_attribute, pool_name, ET.dump(xml_root))

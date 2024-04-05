@@ -755,7 +755,7 @@ class TestHmsIntegration(ImpalaTestSuite):
                             '(x int, y int) stored as parquet') as table_name:
         self.client.execute('invalidate metadata')
         self.client.execute('invalidate metadata %s' % table_name)
-        print self.impala_table_stats(table_name)
+        print(self.impala_table_stats(table_name))
         assert 'PARQUET' == self.impala_table_stats(table_name)[()]['format']
         self.run_stmt_in_hive(
             'alter table %s set fileformat avro' % table_name)

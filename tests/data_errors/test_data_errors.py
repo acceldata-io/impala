@@ -82,13 +82,13 @@ class TestHdfsUnknownErrors(ImpalaTestSuite):
       output, error = subprocess.Popen(
           ['hdfs', 'dfsadmin', '-safemode', 'get'],
               stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
-      assert error is "", "Couldn't get status of Safe mode. Error: %s" % (error)
+      assert error == "", "Couldn't get status of Safe mode. Error: %s" % (error)
       assert "Safe mode is OFF" in output
       # Turn safe mode on.
       output, error = subprocess.Popen(
           ['hdfs', 'dfsadmin', '-safemode', 'enter'],
               stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
-      assert error is "", "Couldn't turn Safe mode ON. Error: %s" % (error)
+      assert error == "", "Couldn't turn Safe mode ON. Error: %s" % (error)
       assert "Safe mode is ON" in output
 
       # We shouldn't be able to write to HDFS when it's in safe mode.
@@ -103,7 +103,7 @@ class TestHdfsUnknownErrors(ImpalaTestSuite):
       output, error = subprocess.Popen(
           ['hdfs', 'dfsadmin', '-safemode', 'leave'],
               stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
-      assert error is "", "Couldn't turn Safe mode OFF. Error: %s" % (error)
+      assert error == "", "Couldn't turn Safe mode OFF. Error: %s" % (error)
       assert "Safe mode is OFF" in output
 
 @SkipIfS3.qualified_path

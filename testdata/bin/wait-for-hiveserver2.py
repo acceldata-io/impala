@@ -71,20 +71,20 @@ while time.time() - now < TIMEOUT_SECONDS:
       close_session_req = TCLIService.TCloseSessionReq()
       close_session_req.sessionHandle = resp.sessionHandle
       hs2_client.CloseSession(close_session_req)
-      print "HiveServer2 service is up at %s." % options.hs2_hostport
+      print("HiveServer2 service is up at %s." % options.hs2_hostport)
       exit(0)
   except Exception as e:
     if "SASL" in e.message:  # Bail out on SASL failures
-      print "SASL failure when attempting connection:"
+      print("SASL failure when attempting connection:")
       raise
     if "GSS" in e.message:   # Other GSSAPI failures
-      print "GSS failure when attempting connection:"
+      print("GSS failure when attempting connection:")
       raise
-    print "Waiting for HiveServer2 at %s..." % options.hs2_hostport
-    print e
+    print("Waiting for HiveServer2 at %s..." % options.hs2_hostport)
+    print(e)
   finally:
     hs2_transport.close()
     time.sleep(0.5)
 
-print "HiveServer2 service failed to start within %s seconds." % TIMEOUT_SECONDS
+print("HiveServer2 service failed to start within %s seconds." % TIMEOUT_SECONDS)
 exit(1)

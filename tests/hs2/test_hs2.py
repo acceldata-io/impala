@@ -334,7 +334,7 @@ class TestHS2(HS2TestSuite):
 
     # Check that an error message and sql state have been set.
     assert get_operation_status_resp.errorMessage is not None and \
-        get_operation_status_resp.errorMessage is not ""
+        get_operation_status_resp.errorMessage != ""
     assert get_operation_status_resp.sqlState == SQLSTATE_GENERAL_ERROR
 
   @needs_session()

@@ -89,7 +89,7 @@ class TestBreakpadBase(CustomClusterTestSuite):
         # For every process in the list we might see the original Impala process plus a
         # forked off child that is writing the minidump. We need to catch both.
         for pid in process.get_pids():
-          print "Checking pid %s" % pid
+          print("Checking pid %s" % pid)
           psutil_process = psutil.Process(pid)
           psutil_process.wait(timeout)
       except psutil.NoSuchProcess:
@@ -462,7 +462,7 @@ class TestLogging(TestBreakpadBase):
     test_error_msg = ('123456789abcde_' * 64)  # 1 KB error message
     test_debug_actions = 'LOG_MAINTENANCE_STDERR:FAIL@1.0@' + test_error_msg
     daemon = 'impalad'
-    os.chmod(self.tmp_dir, 0744)
+    os.chmod(self.tmp_dir, 0o744)
 
     expected_log_max_bytes = int(1.2 * 1024**2)  # 1.2 MB
     self.assert_logs(daemon, 0, expected_log_max_bytes)

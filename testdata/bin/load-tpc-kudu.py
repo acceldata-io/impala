@@ -72,7 +72,7 @@ def load_data():
       query = sqlparse.format(query.rstrip(';'), strip_comments=True)
       query_str = query.format(**sql_params)
       if (len(query_str)) == 0: continue
-      if verbose: print query_str
+      if verbose: print(query_str)
       impala.execute(query_str)
 
 def get_test_file_path(workload):
