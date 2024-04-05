@@ -151,7 +151,7 @@ class TestAggregation(ImpalaTestSuite):
       err = abs(result_lut[key] - int(actual_string))
       rel_err =  err / float(result_lut[key])
       #print key, result_lut[key], actual_string,abs(result_lut[key] - int(actual_string))
-      print(f"{key} {result_lut[key]} {actual_string} {abs(result_lut[key - int(actual_string))}")
+      print(f"{key} {result_lut[key]} {actual_string} {abs(result_lut[key] - int(actual_string))}")
       assert err <= 1 or rel_err < 0.05
     elif data_type in ('float', 'double') and agg_func != 'count':
       # Compare with a margin of error.

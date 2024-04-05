@@ -158,7 +158,7 @@ class ImpalaCluster(object):
         result = client.execute("select 1")
         assert result.success
         ++n
-      except Exception as e: print e
+      except Exception as e: print(e)
       finally:
         client.close()
     return n
