@@ -84,8 +84,8 @@ import org.slf4j.LoggerFactory;
 /**
  * Base class for Hive 3 MetastoreShim.
  */
-public class Hive3MetastoreShimBase {
-  private static final Logger LOG = LoggerFactory.getLogger(Hive3MetastoreShimBase.class);
+public class Hive4MetastoreShimBase {
+  private static final Logger LOG = LoggerFactory.getLogger(Hive4MetastoreShimBase.class);
 
   protected static final String EXTWRITE = "EXTWRITE";
   protected static final String EXTREAD = "EXTREAD";
@@ -99,7 +99,7 @@ public class Hive3MetastoreShimBase {
   protected static final String HIVEMQT = "HIVEMQT";
   // Virtual View
   protected static final String HIVESQL = "HIVESQL";
-  protected static final long MAJOR_VERSION = 3;
+  protected static final long MAJOR_VERSION = 4;
   protected static boolean capabilitiestSet_ = false;
 
   // Max sleep interval during acquiring an ACID lock.

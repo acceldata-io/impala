@@ -452,7 +452,8 @@ bootstrap_dependencies() {
     cp $IMPALA_HOME/../hadoopAarch64NativeLibs/lib*  $HADOOP_HOME/lib/native/
   fi
   if [[ "${USE_APACHE_HIVE}" = true ]]; then
-    "$IMPALA_HOME/testdata/bin/patch_hive.sh"
+    rm $HIVE_HOME/lib/guava-*jar
+    cp $HADOOP_HOME/share/hadoop/hdfs/lib/guava-*.jar $HIVE_HOME/lib/
   fi
 }
 
