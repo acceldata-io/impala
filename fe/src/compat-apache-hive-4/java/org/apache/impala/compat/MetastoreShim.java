@@ -149,6 +149,7 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
 
   private static final String CONNECTORREAD = "CONNECTORREAD";
   private static final String CONNECTORWRITE = "CONNECTORWRITE";
+  public static final String IMPALA_ENGINE = "impala";
 
   private static List<String> processorCapabilities = Lists.newArrayList();
 
@@ -159,21 +160,13 @@ public class MetastoreShim extends Hive4MetastoreShimBase {
       Table tbl, TblTransaction tblTxn)
       throws ImpalaRuntimeException {
 	tbl.setWriteId(tblTxn.writeId);
-
       try {
-
         client.alter_table(null, tbl.getDbName(), tbl.getTableName(),
-
           tbl, null, tblTxn.validWriteIds);
-
       }
-
       catch (TException e) {
-
         throw new ImpalaRuntimeException(
-
             String.format(HMS_RPC_ERROR_FORMAT_STR, "alter_table"), e);
-
       }
   }
 
