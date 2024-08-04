@@ -3496,3 +3496,14 @@ INSERT INTO {db_name}{db_suffix}.{table_name} VALUES
  )
 ---- LOAD
 ====
+---- DATASET
+functional
+---- BASE_TABLE_NAME
+empty_parquet_page_source_impala10186
+---- COLUMNS
+id bigint
+---- ROW_FORMAT
+delimited
+---- LOAD
+LOAD DATA LOCAL INPATH '{impala_home}/testdata/empty_parquet_page_source_impala10186/data.csv' OVERWRITE INTO TABLE {db_name}{db_suffix}.{table_name};
+====

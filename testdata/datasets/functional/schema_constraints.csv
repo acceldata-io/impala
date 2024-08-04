@@ -334,3 +334,6 @@ table_name:array_tbl, constraint:restrict_to, table_format:orc/def/block
 
 # 'alltypestiny_negative' only used in ORC tests.
 table_name:alltypestiny_negative, constraint:restrict_to, table_format:orc/def/block
+
+# The table is used to test a specific parquet page layout bug
+table_name:empty_parquet_page_source_impala10186, constraint:restrict_to, table_format:text/none/none
