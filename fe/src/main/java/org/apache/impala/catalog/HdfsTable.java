@@ -833,6 +833,21 @@ public class HdfsTable extends Table implements FeFsTable {
    *              {@link #getAvailableAccessLevel(String, Path, FsPermissionCache)}
    */
   private static boolean assumeReadWriteAccess(FileSystem fs) {
+    // Authorization on Ranger-enabled HDFS can be managed via the HDFS policy
+    // repository, and thus it is possible to check the existence of necessary
+    // permissions via RPC to the Hadoop NameNode, or Ranger REST API. Before
+    // IMPALA-12994 is resolved, we assume the Impala service user has the READ_WRITE
+    // permission on all HDFS files in the case when Ranger is enabled in Impala.
+    // This also avoids significant overhead when the number of table partitions gets
+    // bigger.
+    if (FileSystemUtil.isDistributedFileSystem(fs) &&
+        BackendConfig.INSTANCE.getAuthorizationProvider().equalsIgnoreCase("ranger")) {
+      return true;
+    }
+    if (FileSystemUtil.isDistributedFileSystem(fs) &&
+        BackendConfig.INSTANCE.getAuthorizationProvider().equalsIgnoreCase("ranger")) {
+      return true;
+    }
     // Avoid calling getPermissions() on file path for S3 files, as that makes a round
     // trip to S3. Also, the S3A connector is currently unable to manage S3 permissions,
     // so for now it is safe to assume that all files(objects) have READ_WRITE
