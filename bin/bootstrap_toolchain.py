@@ -319,6 +319,21 @@ class CdpComponent(EnvVersionedPackage):
                                        unpack_directory_tmpl=unpack_directory_tmpl,
                                        makedir=makedir, template_subs_in=template_subs)
 
+class OdpComponent(EnvVersionedPackage):
+  def __init__(self, name, explicit_version=None, archive_basename_tmpl=None,
+               unpack_directory_tmpl=None, makedir=False):
+    template_subs = {"toolchain_host": os.environ["IMPALA_TOOLCHAIN_HOST"],
+                     "odp_build_number": os.environ["ODP_BUILD_NUMBER"]}
+    url_prefix_tmpl = "https://mirror.odp.acceldata.dev/ODP/standalone/${odp_build_number}/"
+
+    # Get the output base directory from CDP_COMPONENTS_HOME
+    destination_basedir = os.environ["CDP_COMPONENTS_HOME"]
+    super(OdpComponent, self).__init__(name, url_prefix_tmpl, destination_basedir,
+                                       explicit_version=explicit_version,
+                                       archive_basename_tmpl=archive_basename_tmpl,
+                                       unpack_directory_tmpl=unpack_directory_tmpl,
+                                       makedir=makedir, template_subs_in=template_subs)
+
 
 class ApacheComponent(EnvVersionedPackage):
   def __init__(self, name, explicit_version=None, archive_basename_tmpl=None,
@@ -514,7 +529,7 @@ def get_hadoop_downloads():
                              component_path_tmpl="${name}/common/${name}-${version}/",
                              archive_basename_tmpl="${name}-${version}")
   else:
-    hadoop = CdpComponent("hadoop")
+    hadoop = OdpComponent("hadoop")
 
   if use_apache_hbase:
     hbase = ApacheComponent("hbase",
@@ -522,7 +537,7 @@ def get_hadoop_downloads():
                             archive_basename_tmpl="${name}-${version}-hadoop3-bin",
                             unpack_directory_tmpl="${name}-${version}-hadoop3")
   else:
-    hbase = CdpComponent("hbase",
+    hbase = OdpComponent("hbase",
                          archive_basename_tmpl="hbase-${version}-bin",
                          unpack_directory_tmpl="hbase-${version}")
 
@@ -530,8 +545,8 @@ def get_hadoop_downloads():
     hive = ApacheComponent("hive", archive_basename_tmpl="apache-hive-${version}-bin")
     hive_src = ApacheComponent("hive", archive_basename_tmpl="apache-hive-${version}-src")
   else:
-    hive = CdpComponent("hive", archive_basename_tmpl="apache-hive-${version}-bin")
-    hive_src = CdpComponent("hive-source",
+    hive = OdpComponent("hive", archive_basename_tmpl="apache-hive-${version}-bin")
+    hive_src = OdpComponent("hive-source",
                             explicit_version=os.environ.get("IMPALA_HIVE_VERSION"),
                             archive_basename_tmpl="hive-${version}-source",
                             unpack_directory_tmpl="hive-${version}")
@@ -540,7 +555,7 @@ def get_hadoop_downloads():
                           component_path_tmpl="${name}/${version}/",
                           archive_basename_tmpl="apache-${name}-${version}-bin")
   else:
-    tez = CdpComponent("tez",
+    tez = OdpComponent("tez",
                        archive_basename_tmpl="tez-${version}-minimal",
                        makedir=True)
   if use_apache_ranger:
@@ -556,12 +571,12 @@ def get_hadoop_downloads():
                                  archive_basename_tmpl=archive_basename_tmpl,
                                  template_subs_in=template_subs)
   else:
-    ranger = CdpComponent("ranger", archive_basename_tmpl="ranger-${version}-admin")
+    ranger = OdpComponent("ranger", archive_basename_tmpl="ranger-${version}-admin")
 
   if use_apache_ozone:
     ozone = ApacheComponent("ozone", component_path_tmpl="ozone/${version}")
   else:
-    ozone = CdpComponent("ozone")
+    ozone = OdpComponent("ozone")
 
   use_override_hive = \
       "HIVE_VERSION_OVERRIDE" in os.environ and os.environ["HIVE_VERSION_OVERRIDE"] != ""

@@ -209,6 +209,29 @@ unset IMPALA_MOLD_URL
 # Impala JDBC driver for testing.
 export IMPALA_SIMBA_JDBC_DRIVER_VERSION=42-2.6.32.1041
 
+# Thrift related environment variables.
+# IMPALA_THRIFT_POM_VERSION is used to populate IMPALA_THRIFT_JAVA_VERSION and
+# thrift.version in java/pom.xml.
+# IMPALA_THRIFT_PY_VERSION is used to find the thrift compiler to produce
+# the generated Python code. The code that uses the generated Python code gets
+# the corresponding Thrift runtime library by pip installing thrift (and does not
+# respect this version). If upgrading IMPALA_THRIFT_PY_VERSION, also upgrade the
+# thrift version in shell/ext-py, shell/packaging/requirements.txt, and
+# infra/python/deps/requirements.txt.
+export IMPALA_THRIFT_CPP_VERSION=0.16.0-p7
+unset IMPALA_THRIFT_CPP_URL
+if $USE_APACHE_HIVE; then
+  # Apache Hive 3 clients can't run on thrift versions >= 0.14 (IMPALA-11801)
+  export IMPALA_THRIFT_POM_VERSION=0.11.0
+  export IMPALA_THRIFT_JAVA_VERSION=${IMPALA_THRIFT_POM_VERSION}-p5
+else
+  export IMPALA_THRIFT_POM_VERSION=0.16.0
+  export IMPALA_THRIFT_JAVA_VERSION=${IMPALA_THRIFT_POM_VERSION}-p7
+fi
+unset IMPALA_THRIFT_JAVA_URL
+export IMPALA_THRIFT_PY_VERSION=0.16.0-p7
+unset IMPALA_THRIFT_PY_URL
+
 # Find system python versions for testing
 export IMPALA_SYSTEM_PYTHON2="${IMPALA_SYSTEM_PYTHON2_OVERRIDE-$(command -v python2)}"
 export IMPALA_SYSTEM_PYTHON3="${IMPALA_SYSTEM_PYTHON3_OVERRIDE-$(command -v python3)}"
@@ -257,6 +280,8 @@ export APACHE_TEZ_VERSION=0.10.2
 export APACHE_HIVE_VERSION=3.1.3
 export APACHE_HIVE_STORAGE_API_VERSION=2.7.0
 export APACHE_OZONE_VERSION=1.4.0
+
+export ARCH_NAME=$(uname -p)
 
 # Java dependencies that are not also runtime components. Declaring versions here allows
 # other branches to override them in impala-config-branch.sh for cleaner patches.
@@ -401,6 +426,7 @@ else
   export USE_APACHE_OZONE=false
 fi
 
+
 export APACHE_COMPONENTS_HOME="$IMPALA_TOOLCHAIN/apache_components"
 
 if $USE_APACHE_HADOOP; then
@@ -463,6 +489,7 @@ if [[ "${IMPALA_HIVE_MAJOR_VERSION}" == "1" ||
   return 1
 fi
 
+export USE_APACHE_OZONE=${USE_APACHE_OZONE-false}
 if $USE_APACHE_OZONE; then
   export IMPALA_OZONE_VERSION=${APACHE_OZONE_VERSION}
   export IMPALA_OZONE_URL=${APACHE_OZONE_URL-}
