@@ -570,7 +570,7 @@ public Map<String,String> getParameters() {
    * Factory method that creates a new Table from its Thrift representation.
    * Determines the type of table to create based on the Thrift table provided.
    */
-  public static Table fromThrift(Db parentDb, TTable thriftTable)
+  public static Table fromThrift(Db parentDb, TTable thriftTable, boolean loadedInImpalad)
       throws TableLoadingException {
     CatalogInterners.internFieldsInPlace(thriftTable);
     Table newTable;
@@ -591,6 +591,7 @@ public Map<String,String> getParameters() {
           IncompleteTable.createUninitializedTable(parentDb, thriftTable.getTbl_name(),
               tblType, MetadataOp.getTableComment(thriftTable.getMetastore_table()));
     }
+    newTable.storedInImpaladCatalogCache_ = loadedInImpalad;
     try {
       newTable.loadFromThrift(thriftTable);
     } catch (IcebergTableLoadingException e) {
@@ -641,8 +642,6 @@ public Map<String,String> getParameters() {
         TAccessLevel.READ_WRITE;
 
     storageMetadataLoadTime_ = thriftTable.getStorage_metadata_load_time_ns();
-
-    storedInImpaladCatalogCache_ = true;
   }
 
   /**
