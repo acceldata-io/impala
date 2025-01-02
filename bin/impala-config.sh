@@ -238,11 +238,11 @@ unset IMPALA_THRIFT_PY_URL
 
 # Find system python versions for testing
 
-if command -v python2 >/dev/null || [ -n "$IMPALA_SYSTEM_PYTHON2_OVERRIDE" ]; then
+if command -v python2 >/dev/null || [ -n "${IMPALA_SYSTEM_PYTHON2_OVERRIDE:-}" ]; then
   export IMPALA_SYSTEM_PYTHON2="${IMPALA_SYSTEM_PYTHON2_OVERRIDE-$(command -v python2)}"
 fi
 
-if command -v ambari-python-wrap >/dev/null || [ -n "$IMPALA_SYSTEM_PYTHON3_OVERRIDE" ]; then
+if command -v ambari-python-wrap >/dev/null || [ -n "${IMPALA_SYSTEM_PYTHON3_OVERRIDE:-}" ]; then
     # Extract major python version from ambari-python-wrap
     PYTHON_VER=$($(command -v ambari-python-wrap) --version 2>&1 | tr -s '[:blank:]' . | cut -d '.' -f2)
 
