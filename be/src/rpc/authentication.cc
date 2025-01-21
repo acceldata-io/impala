@@ -1377,8 +1377,8 @@ void SecureAuthProvider::SetupConnectionContext(
   TSocket* socket = nullptr;
   switch (underlying_transport_type) {
     case ThriftServer::BINARY: {
-      TBufferedTransport* buffered_transport =
-          down_cast<TBufferedTransport*>(input_transport);
+      ThriftServer::BufferedTransport* buffered_transport =
+          down_cast<ThriftServer::BufferedTransport*>(input_transport);
       TSaslServerTransport* sasl_transport = down_cast<TSaslServerTransport*>(
           buffered_transport->getUnderlyingTransport().get());
       socket = down_cast<TSocket*>(sasl_transport->getUnderlyingTransport().get());
@@ -1485,8 +1485,8 @@ void NoAuthProvider::SetupConnectionContext(
   TSocket* socket = nullptr;
   switch (underlying_transport_type) {
     case ThriftServer::BINARY: {
-      TBufferedTransport* buffered_transport =
-          down_cast<TBufferedTransport*>(input_transport);
+      ThriftServer::BufferedTransport* buffered_transport =
+          down_cast<ThriftServer::BufferedTransport*>(input_transport);
       socket = down_cast<TSocket*>(buffered_transport->getUnderlyingTransport().get());
       break;
     }
