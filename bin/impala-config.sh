@@ -70,7 +70,7 @@ fi
 # WARNING: If changing this value, also run these commands:
 # cd ${IMPALA_HOME}/java
 # mvn versions:set -DnewVersion=YOUR_NEW_VERSION
-export IMPALA_VERSION=4.4.0.3.3.6.0.1
+export IMPALA_VERSION=4.4.0.3.2.3.3.3
 
 # Whether to build on Apache Hive (or CDP Hive). Versions of some toolchain dependencies
 # (e.g. thrift) will also depend on this.
@@ -256,19 +256,19 @@ fi
 export IMPALA_TOOLCHAIN_HOST
 
 export CDP_BUILD_NUMBER=49623641
-export ODP_BUILD_NUMBER=3.3.6.0-1
+export ODP_BUILD_NUMBER=3.2.3.3-3
 export CDP_MAVEN_REPOSITORY=\
 "https://${IMPALA_TOOLCHAIN_HOST}/build/cdp_components/${CDP_BUILD_NUMBER}/maven"
 export CDP_AVRO_JAVA_VERSION=1.11.3
-export CDP_HADOOP_VERSION=3.3.6.3.3.6.0-1
-export CDP_HBASE_VERSION=2.5.8.3.3.6.0-1
-export CDP_HIVE_VERSION=4.0.0.3.3.6.0-1
+export CDP_HADOOP_VERSION=3.2.3.3.2.3.3-3
+export CDP_HBASE_VERSION=2.4.11.3.2.3.3-3
+export CDP_HIVE_VERSION=3.1.4.3.2.3.3-3
 export CDP_ICEBERG_VERSION=1.3.1.7.3.0.0-128
-export CDP_KNOX_VERSION=2.0.0.3.3.6.0-1
-export CDP_OZONE_VERSION=1.4.0.3.3.6.0-1
+export CDP_KNOX_VERSION=1.6.1.3.2.3.3-3
+export CDP_OZONE_VERSION=1.4.0.3.2.3.3-3
 export CDP_PARQUET_VERSION=1.13.1
-export CDP_RANGER_VERSION=2.5.0.3.3.6.0-1
-export CDP_TEZ_VERSION=0.10.3.3.3.6.0-1
+export CDP_RANGER_VERSION=2.3.0.3.2.3.3-3
+export CDP_TEZ_VERSION=0.10.1.3.2.3.3-3
 
 # Ref: https://infra.apache.org/release-download-pages.html#closer
 : ${APACHE_MIRROR:="https://www.apache.org/dyn/closer.cgi"}
