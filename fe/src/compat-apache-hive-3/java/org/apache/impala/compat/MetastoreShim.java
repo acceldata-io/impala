@@ -58,10 +58,10 @@ import org.apache.hadoop.hive.metastore.api.ThriftHiveMetastore;
 import org.apache.hadoop.hive.metastore.api.ThriftHiveMetastore.Client;
 import org.apache.hadoop.hive.metastore.messaging.AlterTableMessage;
 import org.apache.hadoop.hive.metastore.messaging.EventMessage;
+import org.apache.hadoop.hive.metastore.messaging.MessageBuilder;
 import org.apache.hadoop.hive.metastore.messaging.MessageDeserializer;
 import org.apache.hadoop.hive.metastore.messaging.MessageFactory;
 import org.apache.hadoop.hive.metastore.messaging.json.JSONDropDatabaseMessage;
-import org.apache.hadoop.hive.metastore.messaging.json.JSONMessageFactory;
 import org.apache.hadoop.hive.metastore.txn.TxnUtils;
 import org.apache.hadoop.hive.metastore.utils.FileUtils;
 import org.apache.impala.catalog.CatalogException;
@@ -191,8 +191,8 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
   @VisibleForTesting
   public static AlterTableMessage buildAlterTableMessage(Table before, Table after,
       boolean isTruncateOp, long writeId) {
-    return JSONMessageFactory.getInstance().buildAlterTableMessage(before, after,
-        isTruncateOp);
+    return MessageBuilder.getInstance().buildAlterTableMessage(before, after,
+        isTruncateOp, writeId);
   }
 
   /**
@@ -213,12 +213,7 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
    */
   public static ValidWriteIdList fetchValidWriteIds(IMetaStoreClient client,
       String tableFullName) throws TException {
-    // fix HIVE-20929
-    ValidTxnList txns = client.getValidTxns();
-    List<String> tablesList = Collections.singletonList(tableFullName);
-    List<TableValidWriteIds> writeIdList = client
-        .getValidWriteIds(tablesList, txns.toString());
-    return TxnUtils.createValidReaderWriteIdList(writeIdList.get(0));
+    return client.getValidWriteIds(tableFullName);
   }
 
   /**
