@@ -105,7 +105,6 @@ DECLARE_bool(auto_check_compaction);
 DECLARE_bool(enable_sync_to_latest_event_on_ddls);
 DECLARE_bool(pull_table_types_and_comments);
 DECLARE_bool(enable_reload_events);
-DECLARE_string(geospatial_library);
 DECLARE_string(file_metadata_reload_properties);
 DECLARE_string(java_weigher);
 DECLARE_int32(iceberg_reload_new_files_threshold);
@@ -443,12 +442,6 @@ Status PopulateThriftBackendGflags(TBackendGflags& cfg) {
       FLAGS_use_hms_column_order_for_hbase_tables);
   cfg.__set_ignored_dir_prefix_list(FLAGS_ignored_dir_prefix_list);
   cfg.__set_enable_reload_events(FLAGS_enable_reload_events);
-  if (FLAGS_geospatial_library == to_string(TGeospatialLibrary::NONE)) {
-    cfg.__set_geospatial_library(TGeospatialLibrary::NONE);
-  } else {
-    DCHECK_EQ(FLAGS_geospatial_library, to_string(TGeospatialLibrary::HIVE_ESRI));
-    cfg.__set_geospatial_library(TGeospatialLibrary::HIVE_ESRI);
-  }
   cfg.__set_query_cpu_count_divisor(FLAGS_query_cpu_count_divisor);
   cfg.__set_processing_cost_use_equal_expr_weight(
       FLAGS_processing_cost_use_equal_expr_weight);

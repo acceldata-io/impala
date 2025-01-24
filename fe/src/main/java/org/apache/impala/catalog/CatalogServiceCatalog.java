@@ -1960,9 +1960,9 @@ public class CatalogServiceCatalog extends Catalog {
     int numFuncs = 0;
     for (org.apache.hadoop.hive.metastore.api.Function function: functions) {
       try {
-        HiveJavaFunctionFactoryImpl factory =
-            new HiveJavaFunctionFactoryImpl(localLibraryPath_);
-        HiveJavaFunction javaFunction = factory.create(function);
+        HiveJavaFunctionFactoryImpl factory = new HiveJavaFunctionFactoryImpl();
+        HiveJavaFunction javaFunction =
+            factory.create(localLibraryPath_, function);
         for (Function fn: javaFunction.extract()) {
           db.addFunction(fn);
           fn.setCatalogVersion(incrementAndGetCatalogVersion());
