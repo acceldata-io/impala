@@ -31,15 +31,6 @@ using namespace std;
 using std::mutex;
 using std::unique_lock;
 
-// TODO: Run perf tests and empirically settle on the most optimal default value for the
-// read buffer sizes. Currently setting them as 128k for the same reason as for S3, i.e.
-// due to JNI array allocation and memcpy overhead, 128k was emperically found to have the
-// least overhead.
-DEFINE_int64(adls_read_chunk_size, 128 * 1024, "The maximum read chunk size to use when "
-    "reading from ADLS.");
-DEFINE_int64(abfs_read_chunk_size, 128 * 1024, "The maximum read chunk size to use when "
-    "reading from ABFS.");
-
 DECLARE_bool(cache_remote_file_handles);
 DECLARE_bool(cache_s3_file_handles);
 DECLARE_bool(cache_abfs_file_handles);
@@ -132,7 +123,7 @@ void ScanRange::AddUnusedBuffers(vector<unique_ptr<BufferDescriptor>>&& buffers,
   if (unblocked) ScheduleScanRange();
 }
 
-bool ScanRange::FileHandleCacheEnabled() const {
+bool ScanRange::FileHandleCacheEnabled() {
   // Global flag for all file handle caching
   if (!is_file_handle_caching_enabled()) return false;
 
@@ -157,12 +148,10 @@ bool ScanRange::FileHandleCacheEnabled() const {
   return false;
 }
 
-ReadOutcome ScanRange::DoReadInternal(DiskQueue* queue, int disk_id, bool use_local_buff,
-    bool use_mem_buffer, shared_lock<shared_mutex>* local_file_lock) {
+ReadOutcome ScanRange::DoReadInternal(
+    DiskQueue* queue, int disk_id, bool use_local_buff) {
   int64_t bytes_remaining = bytes_to_read_ - bytes_read_;
   DCHECK_GT(bytes_remaining, 0);
-  // Can't be set to true together.
-  DCHECK(!(use_local_buff && use_mem_buffer));
 
   unique_ptr<BufferDescriptor> buffer_desc;
   FileReader* file_reader = nullptr;
@@ -188,79 +177,43 @@ ReadOutcome ScanRange::DoReadInternal(DiskQueue* queue, int disk_id, bool use_lo
       buffer_manager_->add_iomgr_buffer_cumulative_bytes_used(buffer_desc->buffer_len());
     }
     read_in_flight_ = true;
-    // Set the correct reader to read the range if the memory buffer is not available.
-    if (!use_mem_buffer) {
-      if (use_local_buff) {
-        file_reader = local_buffer_reader_.get();
-        file_ = disk_buffer_file_->path();
-      } else {
-        file_reader = file_reader_.get();
-      }
-      use_local_buffer_ = use_local_buff;
+    if (use_local_buff) {
+      file_reader = local_buffer_reader_.get();
+      file_ = disk_buffer_file_->path();
+    } else {
+      file_reader = file_reader_.get();
     }
+    use_local_buffer_ = use_local_buff;
   }
+  DCHECK(file_reader != nullptr);
 
+  // No locks in this section.  Only working on local vars.  We don't want to hold a
+  // lock across the read call.
+  // To use the file handle cache:
+  // 1. It must be enabled at the daemon level.
+  // 2. It must be enabled for the particular filesystem.
+  bool use_file_handle_cache = FileHandleCacheEnabled();
+  VLOG_FILE << (use_file_handle_cache ? "Using" : "Skipping")
+            << " file handle cache for " << (expected_local_ ? "local" : "remote")
+            << " file " << file();
+  Status read_status = file_reader->Open(use_file_handle_cache);
   bool eof = false;
-  Status read_status = Status::OK();
+  if (read_status.ok()) {
+    COUNTER_ADD_IF_NOT_NULL(reader_->active_read_thread_counter_, 1L);
+    COUNTER_BITOR_IF_NOT_NULL(reader_->disks_accessed_bitmap_, 1LL << disk_id);
 
-  if (use_mem_buffer) {
-    // The only scenario to use the memory buffer is for the temporary files, the range
-    // is supposed to be read in one round.
-    // For the efficiency consideration, don't have the lock of the memory block, the
-    // safety is implicitly guaranteed by the physical lock of the disk file, which is
-    // required while removing the disk file and the memory blocks. The other case of
-    // removing the memory block is when all of the pages have been read, and that could
-    // only happen after this read.
-    DCHECK(local_file_lock != nullptr);
-    read_status = disk_buffer_file_->ReadFromMemBuffer(
-        offset_, bytes_to_read_, buffer_desc->buffer_, *local_file_lock);
-    if (read_status.ok()) {
-      buffer_desc->len_ = bytes_to_read_;
-      eof = true;
-      COUNTER_ADD_IF_NOT_NULL(reader_->read_use_mem_counter_, 1L);
-      COUNTER_ADD_IF_NOT_NULL(reader_->bytes_read_use_mem_counter_, buffer_desc->len_);
-      COUNTER_ADD_IF_NOT_NULL(reader_->bytes_read_counter_, buffer_desc->len_);
+    if (sub_ranges_.empty()) {
+      DCHECK(cache_.data == nullptr);
+      read_status =
+          file_reader->ReadFromPos(queue, offset_ + bytes_read_, buffer_desc->buffer_,
+              min(bytes_to_read() - bytes_read_, buffer_desc->buffer_len_),
+              &buffer_desc->len_, &eof);
+    } else {
+      read_status = ReadSubRanges(queue, buffer_desc.get(), &eof, file_reader);
     }
-  } else {
-    DCHECK(file_reader != nullptr);
 
-    // No locks in this section.  Only working on local vars.  We don't want to hold a
-    // lock across the read call.
-    // To use the file handle cache:
-    // 1. It must be enabled at the daemon level.
-    // 2. It must be enabled for the particular filesystem.
-    bool use_file_handle_cache = FileHandleCacheEnabled();
-    VLOG_FILE << (use_file_handle_cache ? "Using" : "Skipping")
-              << " file handle cache for " << (expected_local_ ? "local" : "remote")
-              << " file " << file();
-    // Delay open if configured to use a file handle cache or data cache as cache hits
-    // don't require an explicit Open.
-    if (!file_reader->SupportsDelayedOpen()
-        || !(use_file_handle_cache || UseDataCache())) {
-      read_status = file_reader->Open();
-    }
-    if (read_status.ok()) {
-      COUNTER_ADD_IF_NOT_NULL(reader_->active_read_thread_counter_, 1L);
-      COUNTER_BITOR_IF_NOT_NULL(reader_->disks_accessed_bitmap_, 1LL << disk_id);
-
-      if (sub_ranges_.empty()) {
-        DCHECK(cache_.data == nullptr);
-        read_status =
-            file_reader->ReadFromPos(queue, offset_ + bytes_read_, buffer_desc->buffer_,
-                min(bytes_to_read() - bytes_read_, buffer_desc->buffer_len_),
-                &buffer_desc->len_, &eof);
-      } else {
-        read_status = ReadSubRanges(queue, buffer_desc.get(), &eof, file_reader);
-      }
-
-      COUNTER_ADD_IF_NOT_NULL(reader_->bytes_read_counter_, buffer_desc->len_);
-      COUNTER_ADD_IF_NOT_NULL(reader_->active_read_thread_counter_, -1L);
-      if (use_local_buffer_) {
-        COUNTER_ADD_IF_NOT_NULL(reader_->read_use_local_disk_counter_, 1L);
-        COUNTER_ADD_IF_NOT_NULL(
-            reader_->bytes_read_use_local_disk_counter_, buffer_desc->len_);
-      }
-    }
+    COUNTER_ADD_IF_NOT_NULL(reader_->bytes_read_counter_, buffer_desc->len_);
+    COUNTER_ADD_IF_NOT_NULL(reader_->active_read_thread_counter_, -1L);
   }
 
   DCHECK(buffer_desc->buffer_ != nullptr);
@@ -293,7 +246,7 @@ ReadOutcome ScanRange::DoReadInternal(DiskQueue* queue, int disk_id, bool use_lo
   // Store the state we need before calling EnqueueReadyBuffer().
   bool eosr = buffer_desc->eosr();
   // No more reads for this scan range - we can close it.
-  if (eosr && file_reader != nullptr) file_reader->Close();
+  if (eosr) file_reader->Close();
   // Read successful - enqueue the buffer and return the appropriate outcome.
   if (!EnqueueReadyBuffer(move(buffer_desc))) return ReadOutcome::CANCELLED;
   // At this point, if eosr=true, then we cannot touch the state of this scan range
@@ -303,9 +256,7 @@ ReadOutcome ScanRange::DoReadInternal(DiskQueue* queue, int disk_id, bool use_lo
 
 ReadOutcome ScanRange::DoRead(DiskQueue* queue, int disk_id) {
   bool use_local_buffer = false;
-  bool use_mem_buffer = false;
-  if (disk_file_ != nullptr && disk_file_->disk_type() != DiskFileType::LOCAL
-      && disk_buffer_file_ != nullptr) {
+  if (disk_file_ != nullptr && disk_file_->disk_type() != DiskFileType::LOCAL) {
     // The sequence for acquiring the locks should always be from the local to
     // the remote to avoid deadlocks.
     shared_lock<shared_mutex> local_file_lock(*(disk_buffer_file_->GetFileLock()));
@@ -319,25 +270,18 @@ ReadOutcome ScanRange::DoRead(DiskQueue* queue, int disk_id) {
         // the only case could be the query is cancelled, so that both files are deleted.
         return ReadOutcome::CANCELLED;
       }
-
-      // The range can be read from local for two cases.
-      // 1. If the local buffer file is not deleted(evicted) yet.
-      // 2. A block of the file, which contains the range, has been read and stored in
-      // the memory.
-      // If we don't meet any of the cases, the range needs to be read from the remote.
+      // If the local buffer exists, we can read from the local buffer, otherwise,
+      // we will read from the remote file system.
       if (!disk_buffer_file_->is_deleted(buffer_file_lock)) {
         use_local_buffer = true;
-      } else if (disk_buffer_file_->CanReadFromReadBuffer(local_file_lock, offset_)) {
-        use_mem_buffer = true;
       } else {
         // Read from the remote file. The remote file must be in persisted status.
         DCHECK(disk_file_->is_persisted(file_lock));
       }
     }
-    return DoReadInternal(
-        queue, disk_id, use_local_buffer, use_mem_buffer, &local_file_lock);
+    return DoReadInternal(queue, disk_id, use_local_buffer);
   }
-  return DoReadInternal(queue, disk_id, use_local_buffer, use_mem_buffer);
+  return DoReadInternal(queue, disk_id, use_local_buffer);
 }
 
 Status ScanRange::ReadSubRanges(
@@ -351,19 +295,8 @@ Status ScanRange::ReadSubRanges(
         buffer_desc->buffer_len() - buffer_desc->len());
 
     if (cache_.data != nullptr) {
-      // The cache_.data buffer starts at offset_, so adjust the starting
-      // offset for the copies.
-      int64_t buffer_offset = offset - offset_;
-      DCHECK_LE(buffer_offset + bytes_to_read, cache_.len);
-      // DCHECKs are only effective with test coverage, so also return an error
-      // if this would read past the edge of the cache_.data buffer. We wanted
-      // bytes_to_read, but only cache_.len - buffer_offset bytes were available.
-      if (buffer_offset + bytes_to_read > cache_.len) {
-        return Status(TErrorCode::SCANNER_INCOMPLETE_READ, bytes_to_read,
-            cache_.len - buffer_offset, file(), offset);
-      }
       memcpy(buffer_desc->buffer_ + buffer_desc->len(),
-          cache_.data + buffer_offset, bytes_to_read);
+          cache_.data + offset, bytes_to_read);
     } else {
       int64_t current_bytes_read;
       Status read_status = file_reader->ReadFromPos(queue, offset,
@@ -488,58 +421,57 @@ ScanRange::~ScanRange() {
   DCHECK(!read_in_flight_);
 }
 
-void ScanRange::Reset(const FileInfo &fi, int64_t len, int64_t offset, int disk_id,
-    bool expected_local, const BufferOpts& buffer_opts, void* meta_data,
-    DiskFile* disk_file, DiskFile* disk_buffer_file) {
-  Reset(fi, len, offset, disk_id, expected_local, buffer_opts, {},
-      meta_data, disk_file, disk_buffer_file);
+void ScanRange::Reset(hdfsFS fs, const char* file, int64_t len, int64_t offset,
+    int disk_id, bool expected_local, int64_t mtime, const BufferOpts& buffer_opts,
+    void* meta_data, DiskFile* disk_file, DiskFile* disk_buffer_file) {
+  Reset(fs, file, len, offset, disk_id, expected_local, mtime, buffer_opts, {}, meta_data,
+      disk_file, disk_buffer_file);
 }
 
-ScanRange* ScanRange::AllocateScanRange(ObjectPool* obj_pool, const FileInfo &fi,
+ScanRange* ScanRange::AllocateScanRange(ObjectPool* obj_pool, hdfsFS fs, const char* file,
     int64_t len, int64_t offset, std::vector<SubRange>&& sub_ranges, void* metadata,
-    int disk_id, bool expected_local, const BufferOpts& buffer_opts) {
+    int disk_id, bool expected_local, int64_t mtime, const BufferOpts& buffer_opts) {
   DCHECK_GE(disk_id, -1);
   DCHECK_GE(offset, 0);
   DCHECK_GE(len, 0);
   disk_id = ExecEnv::GetInstance()->disk_io_mgr()->AssignQueue(
-      fi.filename, disk_id, expected_local, /* check_default_fs */ true);
+      file, disk_id, expected_local, /* check_default_fs */ true);
   ScanRange* range = obj_pool->Add(new ScanRange);
-  range->Reset(fi, len, offset, disk_id, expected_local, buffer_opts,
+  range->Reset(fs, file, len, offset, disk_id, expected_local, mtime, buffer_opts,
       move(sub_ranges), metadata);
   return range;
 }
 
-void ScanRange::Reset(const FileInfo &fi, int64_t len, int64_t offset, int disk_id,
-    bool expected_local, const BufferOpts& buffer_opts, vector<SubRange>&& sub_ranges,
-    void* meta_data, DiskFile* disk_file, DiskFile* disk_buffer_file) {
+void ScanRange::Reset(hdfsFS fs, const char* file, int64_t len, int64_t offset,
+    int disk_id, bool expected_local, int64_t mtime, const BufferOpts& buffer_opts,
+    vector<SubRange>&& sub_ranges, void* meta_data, DiskFile* disk_file,
+    DiskFile* disk_buffer_file) {
   DCHECK(buffer_manager_->is_readybuffer_empty());
   DCHECK(!read_in_flight_);
-  DCHECK(fi.filename != nullptr);
+  DCHECK(file != nullptr);
   DCHECK_GE(len, 0);
   DCHECK_GE(offset, 0);
   DCHECK(buffer_opts.client_buffer_ == nullptr ||
          buffer_opts.client_buffer_len_ >= len_);
-  fs_ = fi.fs;
-  if (fs_ != nullptr) {
+  fs_ = fs;
+  if (fs != nullptr) {
     file_reader_ = make_unique<HdfsFileReader>(this, fs_, false);
     local_buffer_reader_ = make_unique<LocalFileReader>(this);
   } else {
     file_reader_ = make_unique<LocalFileReader>(this);
   }
-  file_ = fi.filename;
+  file_ = file;
   len_ = len;
   bytes_to_read_ = len;
   offset_ = offset;
   disk_id_ = disk_id;
-  is_encrypted_ = fi.is_encrypted;
-  is_erasure_coded_ = fi.is_erasure_coded;
   cache_options_ = buffer_opts.cache_options_;
   disk_file_ = disk_file;
   disk_buffer_file_ = disk_buffer_file;
 
   // HDFS ranges must have an mtime > 0. Local ranges do not use mtime.
-  mtime_ = fi.mtime;
-  if (fs_) DCHECK_GT(mtime_, 0);
+  if (fs_) DCHECK_GT(mtime, 0);
+  mtime_ = mtime;
   meta_data_ = meta_data;
   if (buffer_opts.client_buffer_ != nullptr) {
     buffer_manager_->set_client_buffer();
@@ -627,36 +559,13 @@ void ScanRange::SetFileReader(unique_ptr<FileReader> file_reader) {
   file_reader_ = move(file_reader);
 }
 
-int64_t ScanRange::MaxReadChunkSize() const {
-  // S3 InputStreams don't support DIRECT_READ (i.e. java.nio.ByteBuffer read()
-  // interface).  So, hdfsRead() needs to allocate a Java byte[] and copy the data out.
-  // Profiles show that both the JNI array allocation and the memcpy adds much more
-  // overhead for larger buffers, so limit the size of each read request.  128K was
-  // chosen empirically by trying values between 4K and 8M and optimizing for lower CPU
-  // utilization and higher S3 througput.
-  if (disk_id_ == io_mgr_->RemoteS3DiskId()) {
-    DCHECK(IsS3APath(file()));
-    return 128 * 1024;
-  }
-  if (disk_id_ == io_mgr_->RemoteAdlsDiskId()) {
-    DCHECK(IsADLSPath(file()));
-    return FLAGS_adls_read_chunk_size;
-  }
-  if (disk_id_ == io_mgr_->RemoteAbfsDiskId()) {
-    DCHECK(IsABFSPath(file()));
-    return FLAGS_abfs_read_chunk_size;
-  }
-  // The length argument of hdfsRead() is an int. Ensure we don't overflow it.
-  return numeric_limits<int>::max();
-}
-
 Status ScanRange::ReadFromCache(
     const unique_lock<mutex>& reader_lock, bool* read_succeeded) {
   DCHECK(reader_lock.mutex() == &reader_->lock_ && reader_lock.owns_lock());
   DCHECK(UseHdfsCache());
   DCHECK_EQ(bytes_read_, 0);
   *read_succeeded = false;
-  Status status = file_reader_->Open();
+  Status status = file_reader_->Open(false);
   if (!status.ok()) return status;
 
   // Check cancel status.
@@ -680,10 +589,6 @@ Status ScanRange::ReadFromCache(
   if (cache_.len < len()) {
     VLOG_QUERY << "Error reading file from HDFS cache: " << file_ << ". Expected "
       << len() << " bytes, but read " << cache_.len << ". Switching to disk read path.";
-    // Null out the cache buffer to avoid any interactions when this falls
-    // back to the regular read path.
-    cache_.len = 0;
-    cache_.data = nullptr;
     // Close the scan range. 'read_succeeded' is still false, so the caller will fall back
     // to non-cached read of this scan range.
     file_reader_->Close();

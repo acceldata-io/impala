@@ -17,21 +17,16 @@
 #
 # Tests for query expiration.
 
-from __future__ import absolute_import, division, print_function
-from builtins import range
 import os
 import pytest
 import re
 import shutil
 import stat
-import subprocess
 import tempfile
-import time
 
 from tests.common.custom_cluster_test_suite import CustomClusterTestSuite
-from tests.common.skip import SkipIf
-from tests.util.hdfs_util import NAMENODE
 from tests.verifiers.metric_verifier import MetricVerifier
+from tests.common.skip import SkipIf
 
 class TestScratchDir(CustomClusterTestSuite):
   @classmethod
@@ -49,13 +44,6 @@ class TestScratchDir(CustomClusterTestSuite):
       select o_orderdate, o_custkey, o_comment
       from tpch.orders
       order by o_orderdate
-      """
-  # Query against a big table with order by requires spill to disk if intermediate
-  # results don't fit in memory.
-  spill_query_big_table = """
-      select l_orderkey, l_linestatus, l_shipdate, l_comment
-      from tpch.lineitem
-      order by l_orderkey
       """
   # Query without order by can be executed without spilling to disk.
   in_mem_query = """
@@ -77,7 +65,7 @@ class TestScratchDir(CustomClusterTestSuite):
 
   def generate_dirs(self, num, writable=True, non_existing=False):
     result = []
-    for i in range(num):
+    for i in xrange(num):
       dir_path = tempfile.mkdtemp()
       if non_existing:
         shutil.rmtree(dir_path)
@@ -86,7 +74,7 @@ class TestScratchDir(CustomClusterTestSuite):
       if not non_existing:
         self.created_dirs.append(dir_path)
       result.append(dir_path)
-      print("Generated dir" + dir_path)
+      print "Generated dir" + dir_path
     return result
 
   def setup_method(self, method):
@@ -98,7 +86,6 @@ class TestScratchDir(CustomClusterTestSuite):
   def teardown_method(self, method):
     for dir_path in self.created_dirs:
       shutil.rmtree(dir_path, ignore_errors=True)
-    self.check_deleted_file_fd()
 
   @pytest.mark.execute_serially
   def test_multiple_dirs(self, vector):
@@ -235,9 +222,13 @@ class TestScratchDir(CustomClusterTestSuite):
     handle = self.execute_query_async_using_client(client, self.spill_query, vector)
     verifier = MetricVerifier(impalad.service)
     verifier.wait_for_metric("impala-server.num-fragments-in-flight", 2)
-    for i in range(5):
-      impalad.service.wait_for_metric_value(
-          'tmp-file-mgr.scratch-space-bytes-used.dir-' + str(i), 1, allow_greater=True)
+    metrics0 = self.get_metric('tmp-file-mgr.scratch-space-bytes-used.dir-0')
+    metrics1 = self.get_metric('tmp-file-mgr.scratch-space-bytes-used.dir-1')
+    metrics2 = self.get_metric('tmp-file-mgr.scratch-space-bytes-used.dir-2')
+    metrics3 = self.get_metric('tmp-file-mgr.scratch-space-bytes-used.dir-3')
+    metrics4 = self.get_metric('tmp-file-mgr.scratch-space-bytes-used.dir-4')
+    assert (metrics0 > 0 and metrics1 > 0 and metrics2 > 0 and metrics3 > 0
+            and metrics4 > 0)
     results = client.fetch(self.spill_query, handle)
     assert results.success
     client.close_query(handle)
@@ -265,62 +256,26 @@ class TestScratchDir(CustomClusterTestSuite):
     handle = self.execute_query_async_using_client(client, self.spill_query, vector)
     verifier = MetricVerifier(impalad.service)
     verifier.wait_for_metric("impala-server.num-fragments-in-flight", 2)
-    # dir1 and dir3 have highest priority and will be used as scratch disk.
-    impalad.service.wait_for_metric_value(
-        'tmp-file-mgr.scratch-space-bytes-used.dir-1', 1, allow_greater=True)
-    impalad.service.wait_for_metric_value(
-        'tmp-file-mgr.scratch-space-bytes-used.dir-3', 1, allow_greater=True)
     metrics0 = self.get_metric('tmp-file-mgr.scratch-space-bytes-used.dir-0')
+    metrics1 = self.get_metric('tmp-file-mgr.scratch-space-bytes-used.dir-1')
     metrics2 = self.get_metric('tmp-file-mgr.scratch-space-bytes-used.dir-2')
+    metrics3 = self.get_metric('tmp-file-mgr.scratch-space-bytes-used.dir-3')
     metrics4 = self.get_metric('tmp-file-mgr.scratch-space-bytes-used.dir-4')
-    assert (metrics0 == 0 and metrics2 == 0 and metrics4 == 0)
+    # dir1 and dir3 have highest priority and will be used as scratch disk.
+    assert (metrics1 > 0 and metrics3 > 0 and metrics0 == 0 and metrics2 == 0
+            and metrics4 == 0)
     results = client.fetch(self.spill_query, handle)
     assert results.success
     client.close_query(handle)
     client.close()
 
-  def dfs_tmp_path(self):
-    return "{}/tmp".format(NAMENODE)
-
-  def find_deleted_files_in_fd(self, pid):
-    fd_path = "/proc/{}/fd".format(pid)
-    # Look for the files with keywords 'scratch' and '(deleted)'.
-    # Limited to keyword 'scratch' because in IMPALA-12698 the process may
-    # create some reference deleted hdfs files, but the files are eventually
-    # removed in a few minutes. This limitation helps to mitigate false-positive
-    # checks.
-    command = "find {} -ls | grep -E 'scratch.*(deleted)'".format(fd_path)
-    try:
-      result = subprocess.check_output(command, shell=True)
-      return result.strip()
-    except subprocess.CalledProcessError as e:
-      if not e.output:
-        # If there is no output, return None.
-        return None
-      return "Error checking the fd path with error '{}'".format(e)
-
-  def check_deleted_file_fd(self):
-    # Check if we have deleted but still referenced files in fd.
-    # Regression test for IMPALA-12681.
-    pids = []
-    for impalad in self.cluster.impalads:
-      pids.append(impalad.get_pid())
-    assert pids
-    for pid in pids:
-      deleted_files = self.find_deleted_files_in_fd(pid)
-      if deleted_files is not None:
-        # Retry again if fails at the first time.
-        time.sleep(15)
-        deleted_files = self.find_deleted_files_in_fd(pid)
-      assert deleted_files is None
-
   @pytest.mark.execute_serially
-  @SkipIf.not_scratch_fs
+  @SkipIf.not_hdfs
   def test_scratch_dirs_remote_spill(self, vector):
     # Test one remote directory with one its local buffer directory.
     normal_dirs = self.generate_dirs(1)
-    # Use dfs for testing.
-    normal_dirs.append(self.dfs_tmp_path())
+    # Use local hdfs for testing. Could be changed to S3.
+    normal_dirs.append('hdfs://localhost:20500/tmp')
     self._start_impala_cluster([
       '--impalad_args=-logbuflevel=-1 -scratch_dirs={0}'.format(','.join(normal_dirs)),
       '--impalad_args=--allow_multiple_scratch_dirs_per_device=true'],
@@ -334,16 +289,16 @@ class TestScratchDir(CustomClusterTestSuite):
     handle = self.execute_query_async_using_client(client, self.spill_query, vector)
     verifier = MetricVerifier(impalad.service)
     verifier.wait_for_metric("impala-server.num-fragments-in-flight", 2)
+    metrics0 = self.get_metric('tmp-file-mgr.scratch-space-bytes-used.dir-0')
     # Dir0 is the remote directory.
-    impalad.service.wait_for_metric_value(
-        'tmp-file-mgr.scratch-space-bytes-used.dir-0', 1, allow_greater=True)
+    assert (metrics0 > 0)
     results = client.fetch(self.spill_query, handle)
     assert results.success
     client.close_query(handle)
     client.close()
 
   @pytest.mark.execute_serially
-  @SkipIf.not_scratch_fs
+  @SkipIf.not_hdfs
   def test_scratch_dirs_mix_local_and_remote_dir_spill_local_only(self, vector):
     '''Two local directories, the first one is always used as local buffer for
        remote directories. Set the second directory big enough so that only spills
@@ -351,7 +306,7 @@ class TestScratchDir(CustomClusterTestSuite):
     normal_dirs = self.generate_dirs(2)
     normal_dirs[0] = '{0}::{1}'.format(normal_dirs[0], 1)
     normal_dirs[1] = '{0}:2GB:{1}'.format(normal_dirs[1], 0)
-    normal_dirs.append(self.dfs_tmp_path())
+    normal_dirs.append('hdfs://localhost:20500/tmp')
     self._start_impala_cluster([
       '--impalad_args=-logbuflevel=-1 -scratch_dirs={0}'.format(','.join(normal_dirs)),
       '--impalad_args=--allow_multiple_scratch_dirs_per_device=true'],
@@ -365,19 +320,18 @@ class TestScratchDir(CustomClusterTestSuite):
     handle = self.execute_query_async_using_client(client, self.spill_query, vector)
     verifier = MetricVerifier(impalad.service)
     verifier.wait_for_metric("impala-server.num-fragments-in-flight", 2)
+    metrics0 = self.get_metric('tmp-file-mgr.scratch-space-bytes-used.dir-0')
+    metrics1 = self.get_metric('tmp-file-mgr.scratch-space-bytes-used.dir-1')
     # Local directory always ranks before the remote one, so dir0 is the local directory.
     # Only spill to dir0 because it has enough space for the spilling.
-    impalad.service.wait_for_metric_value(
-        'tmp-file-mgr.scratch-space-bytes-used.dir-0', 1, allow_greater=True)
-    metrics1 = self.get_metric('tmp-file-mgr.scratch-space-bytes-used.dir-1')
-    assert (metrics1 == 0)
+    assert (metrics0 > 0 and metrics1 == 0)
     results = client.fetch(self.spill_query, handle)
     assert results.success
     client.close_query(handle)
     client.close()
 
   @pytest.mark.execute_serially
-  @SkipIf.not_scratch_fs
+  @SkipIf.not_hdfs
   def test_scratch_dirs_mix_local_and_remote_dir_spill_both(self, vector):
     '''Two local directories, the first one is always used as local buffer for
        remote directories. Set the second directory small enough so that it spills
@@ -385,7 +339,7 @@ class TestScratchDir(CustomClusterTestSuite):
     normal_dirs = self.generate_dirs(2)
     normal_dirs[0] = '{0}:32MB:{1}'.format(normal_dirs[0], 0)
     normal_dirs[1] = '{0}:4MB:{1}'.format(normal_dirs[1], 1)
-    normal_dirs.append(self.dfs_tmp_path())
+    normal_dirs.append('hdfs://localhost:20500/tmp')
     self._start_impala_cluster([
       '--impalad_args=-logbuflevel=-1 -scratch_dirs={0}'.format(','.join(normal_dirs)),
       '--impalad_args=--allow_multiple_scratch_dirs_per_device=true'],
@@ -399,25 +353,24 @@ class TestScratchDir(CustomClusterTestSuite):
     handle = self.execute_query_async_using_client(client, self.spill_query, vector)
     verifier = MetricVerifier(impalad.service)
     verifier.wait_for_metric("impala-server.num-fragments-in-flight", 2)
+    metrics0 = self.get_metric('tmp-file-mgr.scratch-space-bytes-used.dir-0')
+    metrics1 = self.get_metric('tmp-file-mgr.scratch-space-bytes-used.dir-1')
     # Local directory always ranks before the remote one, so dir0 is the local directory.
     # The query spills to both dir0 and dir1. By default the remote file is 16MB each,
     # so the value of metrics1 should be at least one file size.
-    impalad.service.wait_for_metric_value(
-        'tmp-file-mgr.scratch-space-bytes-used.dir-0', 4 * 1024 * 1024)
-    metrics1 = self.get_metric('tmp-file-mgr.scratch-space-bytes-used.dir-1')
-    assert (metrics1 % (16 * 1024 * 1024) == 0)
+    assert (metrics0 == 4 * 1024 * 1024 and metrics1 % (16 * 1024 * 1024) == 0)
     results = client.fetch(self.spill_query, handle)
     assert results.success
     client.close_query(handle)
     client.close()
 
   @pytest.mark.execute_serially
-  @SkipIf.not_scratch_fs
+  @SkipIf.not_hdfs
   def test_scratch_dirs_remote_spill_with_options(self, vector):
     # One local buffer directory and one remote directory.
     normal_dirs = self.generate_dirs(1)
     normal_dirs[0] = '{0}:16MB:{1}'.format(normal_dirs[0], 0)
-    normal_dirs.append(self.dfs_tmp_path())
+    normal_dirs.append('hdfs://localhost:20500/tmp')
     self._start_impala_cluster([
       '--impalad_args=-logbuflevel=-1 -scratch_dirs={0}'.format(','.join(normal_dirs)),
       '--impalad_args=--allow_multiple_scratch_dirs_per_device=true',
@@ -432,12 +385,9 @@ class TestScratchDir(CustomClusterTestSuite):
     handle = self.execute_query_async_using_client(client, self.spill_query, vector)
     verifier = MetricVerifier(impalad.service)
     verifier.wait_for_metric("impala-server.num-fragments-in-flight", 2)
+    metrics0 = self.get_metric('tmp-file-mgr.scratch-space-bytes-used.dir-0')
     # The query spills to the remote directories and creates remote files,
     # so that the size is bigger than 0, and be integer times of remote file size.
-    impalad.service.wait_for_metric_value(
-        'tmp-file-mgr.scratch-space-bytes-used.dir-0',
-        8 * 1024 * 1024, allow_greater=True)
-    metrics0 = self.get_metric('tmp-file-mgr.scratch-space-bytes-used.dir-0')
     assert (metrics0 > 0 and metrics0 % (8 * 1024 * 1024) == 0)
     results = client.fetch(self.spill_query, handle)
     assert results.success
@@ -445,13 +395,13 @@ class TestScratchDir(CustomClusterTestSuite):
     client.close()
 
   @pytest.mark.execute_serially
-  @SkipIf.not_scratch_fs
+  @SkipIf.not_hdfs
   def test_scratch_dirs_remote_spill_concurrent(self, vector):
     '''Concurrently execute multiple queries that trigger the spilling to the remote
     directory to test if there is a deadlock issue.'''
     normal_dirs = self.generate_dirs(1)
     normal_dirs[0] = '{0}:16MB:{1}'.format(normal_dirs[0], 0)
-    normal_dirs.append(self.dfs_tmp_path())
+    normal_dirs.append('hdfs://localhost:20500/tmp')
     num = 5
     self._start_impala_cluster([
       '--impalad_args=-logbuflevel=-1 -scratch_dirs={0}'.format(','.join(normal_dirs)),
@@ -490,38 +440,3 @@ class TestScratchDir(CustomClusterTestSuite):
     # assert that we did use the scratch space and should be integer times of the
     # remote file size.
     assert (total_size > 0 and total_size % (8 * 1024 * 1024) == 0)
-
-  @pytest.mark.execute_serially
-  @SkipIf.not_scratch_fs
-  def test_scratch_dirs_batch_reading(self, vector):
-    # Set the buffer directory small enough to spill to the remote one.
-    normal_dirs = self.generate_dirs(1)
-    normal_dirs[0] = '{0}:2MB:{1}'.format(normal_dirs[0], 1)
-    normal_dirs.append(self.dfs_tmp_path())
-    self._start_impala_cluster([
-      '--impalad_args=-logbuflevel=-1 -scratch_dirs={0}'.format(','.join(normal_dirs)),
-      '--impalad_args=--allow_multiple_scratch_dirs_per_device=true',
-      '--impalad_args=--buffer_pool_clean_pages_limit=1m',
-      '--impalad_args=--remote_tmp_file_size=1M',
-      '--impalad_args=--remote_tmp_file_block_size=1m',
-      '--impalad_args=--remote_read_memory_buffer_size=1GB',
-      '--impalad_args=--remote_batch_read=true'],
-      cluster_size=1,
-      expected_num_impalads=1)
-    self.assert_impalad_log_contains("INFO", "Using scratch directory ",
-                                    expected_count=len(normal_dirs) - 1)
-    vector.get_value('exec_option')['buffer_pool_limit'] = self.buffer_pool_limit
-    impalad = self.cluster.impalads[0]
-    client = impalad.service.create_beeswax_client()
-    handle = self.execute_query_async_using_client(client, self.spill_query, vector)
-    verifier = MetricVerifier(impalad.service)
-    verifier.wait_for_metric("impala-server.num-fragments-in-flight", 2)
-    results = client.fetch(self.spill_query, handle)
-    assert results.success
-    metrics0 = self.get_metric(
-      'tmp-file-mgr.scratch-read-memory-buffer-used-high-water-mark')
-    assert (metrics0 > 0)
-    metrics1 = self.get_metric('tmp-file-mgr.scratch-space-bytes-used-high-water-mark')
-    assert (metrics1 > 0)
-    client.close_query(handle)
-    client.close()

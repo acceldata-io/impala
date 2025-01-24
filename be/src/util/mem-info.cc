@@ -198,7 +198,7 @@ string ThpConfig::DebugString() const {
   return stream.str();
 }
 
-Status ChooseProcessMemLimit(int64_t* bytes_limit, int64_t* process_avail_mem) {
+Status ChooseProcessMemLimit(int64_t* bytes_limit) {
   // Depending on the system configuration, we detect the total amount of memory
   // available to the system - either the available physical memory, or if overcommitting
   // is turned off, we use the memory commit limit from /proc/meminfo (see IMPALA-1690).
@@ -262,7 +262,6 @@ Status ChooseProcessMemLimit(int64_t* bytes_limit, int64_t* process_avail_mem) {
                  << " exceeds CGroup memory limit of "
                  << PrettyPrinter::PrintBytes(cgroup_mem_limit);
   }
-  if (process_avail_mem) *process_avail_mem = avail_mem;
   return Status::OK();
 }
 }
