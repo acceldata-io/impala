@@ -565,7 +565,7 @@ Status ScanRange::ReadFromCache(
   DCHECK(UseHdfsCache());
   DCHECK_EQ(bytes_read_, 0);
   *read_succeeded = false;
-  Status status = file_reader_->Open(false);
+  Status status = file_reader_->Open();
   if (!status.ok()) return status;
 
   // Check cancel status.
