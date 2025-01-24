@@ -91,6 +91,9 @@ import org.apache.thrift.TException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hive.metastore.messaging.MessageEncoder;
+import org.apache.hadoop.hive.metastore.messaging.MessageSerializer;
+
 import static org.apache.impala.util.HiveMetadataFormatUtils.formatOutput;
 
 /**
