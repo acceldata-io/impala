@@ -23,8 +23,8 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.impala.analysis.SqlScanner;
+import org.apache.impala.common.PrintUtils;
 import org.apache.impala.thrift.TBackendGflags;
-import org.apache.impala.thrift.TGeospatialLibrary;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -384,10 +384,6 @@ public class BackendConfig {
 
   public String getIgnoredDirPrefixList() {
     return backendCfg_.ignored_dir_prefix_list;
-  }
-
-  public TGeospatialLibrary getGeospatialLibrary() {
-    return backendCfg_.geospatial_library;
   }
 
   public double getQueryCpuCountDivisor() { return backendCfg_.query_cpu_count_divisor; }

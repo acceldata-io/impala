@@ -439,17 +439,6 @@ DEFINE_int32(state_store_2_port, 24001,
 DEFINE_int32(state_store_ha_port, 24020,
     "port where StatestoreHaService is running");
 
-// TGeospatialLibrary's values are mapped here as constants
-static const string geo_lib_none = "NONE";
-static const string geo_lib_hive_esri = "HIVE_ESRI";
-
-static const string geo_lib_help_msg =
-    "Specifies which implementation of "
-    "geospatial functions should be included as builtins. Possible values: [\""
-    + geo_lib_none + "\", \"" + geo_lib_hive_esri + "\"]";
-
-DEFINE_string(geospatial_library, geo_lib_none, geo_lib_help_msg.c_str());
-
 // ++========================++
 // || Startup flag graveyard ||
 // ++========================++

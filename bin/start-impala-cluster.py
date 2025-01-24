@@ -154,10 +154,6 @@ parser.add_option("--enable_admission_service", dest="enable_admission_service",
 parser.add_option("--enable_external_fe_support", dest="enable_external_fe_support",
                   action="store_true", default=False,
                   help="If true, impalads will start with the external_fe_port defined.")
-parser.add_option("--geospatial_library", dest="geospatial_library",
-                  action="store", default="HIVE_ESRI",
-                  help="Sets which implementation of geospatial libraries should be "
-                  "initialized")
 parser.add_option("--enable_catalogd_ha", dest="enable_catalogd_ha",
                   action="store_true", default=False,
                   help="If true, enables CatalogD HA - the cluster will be launched "
@@ -648,10 +644,6 @@ def build_impalad_arg_lists(cluster_size, num_coordinators, use_exclusive_coordi
       # SFS (single-file system) doesn't have a corresponding TARGET_FILESYSTEM, and
       # it can always be restricted.
       args = "{args} -num_sfs_io_threads=1".format(args=args)
-
-    if "geospatial_library" not in args:
-      args = "{args} -geospatial_library={geospatial_library}".format(
-          args=args, geospatial_library=options.geospatial_library)
 
     if options.jni_frontend_class != "":
       args = "-jni_frontend_class={jni_frontend_class} {args}".format(
