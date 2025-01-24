@@ -96,6 +96,8 @@ import org.apache.hadoop.hive.metastore.messaging.MessageSerializer;
 
 import static org.apache.impala.util.HiveMetadataFormatUtils.formatOutput;
 
+import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
+
 /**
  * A wrapper around some of Hive's Metastore API's to abstract away differences
  * between major versions of different Hive publishers. This implements the shimmed
