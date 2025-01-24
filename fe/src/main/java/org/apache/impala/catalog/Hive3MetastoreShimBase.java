@@ -832,4 +832,11 @@ public class Hive3MetastoreShimBase {
     return wh.getDefaultTablePath(db, tbl.getTableName().toLowerCase(), isExternal)
         .toString();
   }
+
+  /**
+   * At the Metadata level there are no restrictions on column names.
+   */
+  public static boolean validateColumnName(String name) {
+    return MetaStoreServerUtils.validateColumnName(name);
+  }
 }
