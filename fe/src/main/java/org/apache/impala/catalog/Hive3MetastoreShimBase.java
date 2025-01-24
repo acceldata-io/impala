@@ -163,11 +163,10 @@ public class Hive3MetastoreShimBase {
 
   /**
    * Wrapper around MetaStoreUtils.validateName() to deal with added arguments.
-
+   */
   public static boolean validateName(String name) {
-    return MetaStoreServerUtils.validateName(name, null);
+    return MetaStoreUtils.validateName(name, null);
   }
-*/
 
   /**
    * Wrapper around IMetaStoreClient.alter_partition() to deal with added arguments.
