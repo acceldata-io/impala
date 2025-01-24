@@ -107,6 +107,17 @@ under the License.
         <enabled>true</enabled>
       </snapshots>
   </repository>
+    <repository>
+            <id>acceldata staging repo</id>
+            <name>acceldata staging repo</name>
+            <url>https://repo1.acceldata.dev/repository/odp-staging-central/</url>
+            <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+  </repository>
 	  <repository>
       <id>impala.toolchain.kudu.repo</id>
       <url>${env.IMPALA_TOOLCHAIN_KUDU_MAVEN_REPOSITORY}</url>
