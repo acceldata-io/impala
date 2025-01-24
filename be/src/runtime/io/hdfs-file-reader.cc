@@ -35,15 +35,11 @@
 
 DEFINE_bool(use_hdfs_pread, false, "Enables using hdfsPread() instead of hdfsRead() "
     "when performing HDFS read operations. This is necessary to use HDFS hedged reads "
-    "(assuming the HDFS client is configured to do so). Preads are always enabled for "
-    "S3A reads.");
+    "(assuming the HDFS client is configured to do so).");
 
 DEFINE_int64(fs_slow_read_log_threshold_ms, 10L * 1000L,
     "Log diagnostics about I/Os issued via the HDFS client that take longer than this "
     "threshold.");
-
-DEFINE_bool(fs_trace_remote_reads, false,
-    "(Advanced) Log block locations for remote reads.");
 
 #ifndef NDEBUG
 DECLARE_int32(stress_disk_read_delay_ms);
@@ -57,15 +53,14 @@ HdfsFileReader::~HdfsFileReader() {
   DCHECK(cached_buffer_ == nullptr) << "Cached buffer was not released.";
 }
 
-Status HdfsFileReader::Open() {
+Status HdfsFileReader::Open(bool use_file_handle_cache) {
   unique_lock<SpinLock> hdfs_lock(lock_);
   RETURN_IF_ERROR(scan_range_->cancel_status_);
 
   if (exclusive_hdfs_fh_ != nullptr) return Status::OK();
-  return DoOpen();
-}
-
-Status HdfsFileReader::DoOpen() {
+  // If using file handle caching, the reader does not maintain its own
+  // hdfs file handle, so it can skip opening a file handle.
+  if (use_file_handle_cache) return Status::OK();
   auto io_mgr = scan_range_->io_mgr_;
   // Get a new exclusive file handle.
   RETURN_IF_ERROR(io_mgr->GetExclusiveHdfsFileHandle(hdfs_fs_,
@@ -80,30 +75,6 @@ Status HdfsFileReader::DoOpen() {
   }
   ImpaladMetrics::IO_MGR_NUM_OPEN_FILES->Increment(1L);
   return Status::OK();
-}
-
-std::string HdfsFileReader::GetHostList(int64_t file_offset,
-    int64_t bytes_to_read) const {
-  char*** hosts = hdfsGetHosts(hdfs_fs_, scan_range_->file_string()->c_str(),
-      file_offset, bytes_to_read);
-  if (hosts) {
-    std::ostringstream ostr;
-    int blockIndex = 0;
-    while (hosts[blockIndex]) {
-      ostr << " [" << blockIndex << "] { ";
-      int hostIndex = 0;
-      while (hosts[blockIndex][hostIndex]) {
-        if(hostIndex > 0) ostr << ", ";
-        ostr << hosts[blockIndex][hostIndex];
-        hostIndex++;
-      }
-      ostr << " }";
-      blockIndex++;
-    }
-    hdfsFreeHosts(hosts);
-    return ostr.str();
-  }
-  return "";
 }
 
 Status HdfsFileReader::ReadFromPos(DiskQueue* queue, int64_t file_offset, uint8_t* buffer,
@@ -124,6 +95,28 @@ Status HdfsFileReader::ReadFromPos(DiskQueue* queue, int64_t file_offset, uint8_
   *eof = false;
   *bytes_read = 0;
 
+  CachedHdfsFileHandle* borrowed_hdfs_fh = nullptr;
+  hdfsFile hdfs_file;
+
+  // If the reader has an exclusive file handle, use it. Otherwise, borrow
+  // a file handle from the cache.
+  if (exclusive_hdfs_fh_ != nullptr) {
+    hdfs_file = exclusive_hdfs_fh_->file();
+  } else {
+    RETURN_IF_ERROR(io_mgr->GetCachedHdfsFileHandle(hdfs_fs_,
+        scan_range_->file_string(),
+        scan_range_->mtime(), request_context, &borrowed_hdfs_fh));
+    hdfs_file = borrowed_hdfs_fh->file();
+  }
+  // Make sure to release any borrowed file handle.
+  auto release_borrowed_hdfs_fh = MakeScopeExitTrigger([this, &borrowed_hdfs_fh]() {
+    if (borrowed_hdfs_fh != nullptr) {
+      scan_range_->io_mgr_->ReleaseCachedHdfsFileHandle(scan_range_->file_string(),
+          borrowed_hdfs_fh);
+    }
+  });
+
+  int64_t max_chunk_size = scan_range_->MaxReadChunkSize();
   Status status = Status::OK();
   {
     ScopedTimer<MonotonicStopWatch> req_context_read_timer(
@@ -140,38 +133,11 @@ Status HdfsFileReader::ReadFromPos(DiskQueue* queue, int64_t file_offset, uint8_
       *bytes_read = cached_read;
     }
 
-    if (*bytes_read == bytes_to_read) {
-      // All bytes successfully read from data cache. We can safely return.
-      return status;
-    }
-
-    // If we get here, the next bytes are not available in data cache, so we need to get
-    // file handle in order to read the rest of data from file.
-    // If the reader has an exclusive file handle, use it. Otherwise, borrow
-    // a file handle from the cache.
-    req_context_read_timer.Stop();
-
-    // RAII accessor, it will release the file handle at destruction
-    FileHandleCache::Accessor accessor;
-
-    hdfsFile hdfs_file;
-    if (exclusive_hdfs_fh_ != nullptr) {
-      hdfs_file = exclusive_hdfs_fh_->file();
-    } else if (scan_range_->FileHandleCacheEnabled()) {
-      RETURN_IF_ERROR(io_mgr->GetCachedHdfsFileHandle(hdfs_fs_,
-          scan_range_->file_string(), scan_range_->mtime(), request_context, &accessor));
-      hdfs_file = accessor.Get()->file();
-    } else {
-      RETURN_IF_ERROR(DoOpen());
-      hdfs_file = exclusive_hdfs_fh_->file();
-    }
-    req_context_read_timer.Start();
-
     while (*bytes_read < bytes_to_read) {
-      int bytes_remaining = bytes_to_read - *bytes_read;
-      DCHECK_GT(bytes_remaining, 0);
+      int chunk_size = min(bytes_to_read - *bytes_read, max_chunk_size);
+      DCHECK_GT(chunk_size, 0);
       // The hdfsRead() length argument is an int.
-      DCHECK_LE(bytes_remaining, numeric_limits<int>::max());
+      DCHECK_LE(chunk_size, numeric_limits<int>::max());
       int current_bytes_read = -1;
       // bytes_read_ is only updated after the while loop
       int64_t position_in_file = file_offset + *bytes_read;
@@ -179,25 +145,25 @@ Status HdfsFileReader::ReadFromPos(DiskQueue* queue, int64_t file_offset, uint8_
       // ReadFromPosInternal() might fail due to a bad file handle.
       // If that was the case, allow for a retry to fix it.
       status = ReadFromPosInternal(hdfs_file, queue, position_in_file,
-          buffer + *bytes_read, bytes_remaining, &current_bytes_read);
+          buffer + *bytes_read, chunk_size, &current_bytes_read);
 
       // Retry if:
       // - first read was not successful
       // and
       // - used a borrowed file handle
-      if (!status.ok() && accessor.Get()) {
+      if (!status.ok() && borrowed_hdfs_fh != nullptr) {
         // The error may be due to a bad file handle. Reopen the file handle and retry.
         // Exclude this time from the read timers.
         req_context_read_timer.Stop();
         RETURN_IF_ERROR(
             io_mgr->ReopenCachedHdfsFileHandle(hdfs_fs_, scan_range_->file_string(),
-                scan_range_->mtime(), request_context, &accessor));
-        hdfs_file = accessor.Get()->file();
+                scan_range_->mtime(), request_context, &borrowed_hdfs_fh));
+        hdfs_file = borrowed_hdfs_fh->file();
         VLOG_FILE << "Reopening file " << scan_range_->file_string() << " with mtime "
                   << scan_range_->mtime() << " offset " << file_offset;
         req_context_read_timer.Start();
         status = ReadFromPosInternal(hdfs_file, queue, position_in_file,
-            buffer + *bytes_read, bytes_remaining, &current_bytes_read);
+            buffer + *bytes_read, chunk_size, &current_bytes_read);
       }
       // Log diagnostics for failed and successful reads.
       int64_t elapsed_time = req_context_read_timer.ElapsedTime();
@@ -235,27 +201,8 @@ Status HdfsFileReader::ReadFromPos(DiskQueue* queue, int64_t file_offset, uint8_
       }
       *bytes_read += current_bytes_read;
 
-      bool is_first_read = (num_remote_bytes_ == 0);
       // Collect and accumulate statistics
       GetHdfsStatistics(hdfs_file, log_slow_read);
-      if (scan_range_->is_encrypted()) {
-        scan_range_->reader_->bytes_read_encrypted_.Add(current_bytes_read);
-      }
-      if (scan_range_->is_erasure_coded()) {
-        scan_range_->reader_->bytes_read_ec_.Add(current_bytes_read);
-      }
-
-      if (FLAGS_fs_trace_remote_reads && expected_local_ &&
-          num_remote_bytes_ > 0 && is_first_read) {
-        // Only log the first unexpected remote read for scan range
-        LOG(INFO)
-            << "First remote read of scan range on file "
-            << *scan_range_->file_string()
-            << " " << num_remote_bytes_
-            << " bytes. offsets " << file_offset
-            << "-" << file_offset+bytes_to_read-1
-            << GetHostList(file_offset, bytes_to_read);
-      }
     }
 
     int64_t cached_bytes_missed = *bytes_read - cached_read;
@@ -270,18 +217,18 @@ Status HdfsFileReader::ReadFromPos(DiskQueue* queue, int64_t file_offset, uint8_
 }
 
 Status HdfsFileReader::ReadFromPosInternal(hdfsFile hdfs_file, DiskQueue* queue,
-    int64_t position_in_file, uint8_t* buffer, int64_t bytes_to_read, int* bytes_read) {
+    int64_t position_in_file, uint8_t* buffer, int64_t chunk_size, int* bytes_read) {
+  queue->read_size()->Update(chunk_size);
   ScopedHistogramTimer read_timer(queue->read_latency());
   // For file handles from the cache, any of the below file operations may fail
   // due to a bad file handle.
-  if (FLAGS_use_hdfs_pread || IsS3APath(scan_range_->file_string()->c_str())) {
-    if (hdfsPreadFully(
-          hdfs_fs_, hdfs_file, position_in_file, buffer, bytes_to_read) == -1) {
+  if (FLAGS_use_hdfs_pread) {
+    *bytes_read = hdfsPread(hdfs_fs_, hdfs_file, position_in_file, buffer, chunk_size);
+    if (*bytes_read == -1) {
       return Status(TErrorCode::DISK_IO_ERROR, GetBackendString(),
           GetHdfsErrorMsg("Error reading from HDFS file: ",
               *scan_range_->file_string()));
     }
-    *bytes_read = bytes_to_read;
   } else {
     const int64_t cur_offset = hdfsTell(hdfs_fs_, hdfs_file);
     if (cur_offset == -1) {
@@ -298,14 +245,13 @@ Status HdfsFileReader::ReadFromPosInternal(hdfsFile hdfs_file, DiskQueue* queue,
                 position_in_file, *scan_range_->file_string(), GetHdfsErrorMsg("")));
       }
     }
-    *bytes_read = hdfsRead(hdfs_fs_, hdfs_file, buffer, bytes_to_read);
+    *bytes_read = hdfsRead(hdfs_fs_, hdfs_file, buffer, chunk_size);
     if (*bytes_read == -1) {
       return Status(TErrorCode::DISK_IO_ERROR, GetBackendString(),
           GetHdfsErrorMsg("Error reading from HDFS file: ",
               *scan_range_->file_string()));
     }
   }
-  queue->read_size()->Update(*bytes_read);
   return Status::OK();
 }
 
@@ -339,7 +285,6 @@ int64_t HdfsFileReader::ReadDataCache(DataCache* remote_data_cache, int64_t file
       scan_range_->reader_->data_cache_partial_hit_counter_->Add(1);
     }
     ImpaladMetrics::IO_MGR_REMOTE_DATA_CACHE_HIT_BYTES->Increment(cached_read);
-    ImpaladMetrics::IO_MGR_REMOTE_DATA_CACHE_HIT_COUNT->Increment(1);
   }
   return cached_read;
 }
@@ -355,7 +300,6 @@ void HdfsFileReader::WriteDataCache(DataCache* remote_data_cache, int64_t file_o
   scan_range_->reader_->data_cache_miss_bytes_counter_->Add(bytes_missed);
   scan_range_->reader_->data_cache_miss_counter_->Add(1);
   ImpaladMetrics::IO_MGR_REMOTE_DATA_CACHE_MISS_BYTES->Increment(bytes_missed);
-  ImpaladMetrics::IO_MGR_REMOTE_DATA_CACHE_MISS_COUNT->Increment(1);
 }
 
 void HdfsFileReader::Close() {
