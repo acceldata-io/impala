@@ -91,7 +91,12 @@ import org.apache.thrift.TException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.hive.metastore.messaging.MessageEncoder;
+import org.apache.hadoop.hive.metastore.messaging.MessageSerializer;
+
 import static org.apache.impala.util.HiveMetadataFormatUtils.formatOutput;
+
+import org.apache.hadoop.hive.metastore.conf.MetastoreConf;
 
 /**
  * A wrapper around some of Hive's Metastore API's to abstract away differences
@@ -136,26 +141,26 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
         "alterPartitionsWithTransaction is not supported.");
   }
 
-  /**
-   * Wrapper around IMetaStoreClient.getTableColumnStatistics() to deal with added
-   * arguments.
-   */
-  public static List<ColumnStatisticsObj> getTableColumnStatistics(
-      IMetaStoreClient client, String dbName, String tableName, List<String> colNames)
-      throws NoSuchObjectException, MetaException, TException {
-    return client.getTableColumnStatistics(dbName, tableName, colNames);
-  }
+    /**
+     * Wrapper around IMetaStoreClient.getTableColumnStatistics() to deal with added
+     * arguments.
+     */
+    public static List<ColumnStatisticsObj> getTableColumnStatistics(
+            IMetaStoreClient client, String dbName, String tableName, List<String> colNames)
+            throws NoSuchObjectException, MetaException, TException {
+        return client.getTableColumnStatistics(dbName, tableName, colNames,/*engine*/IMPALA_ENGINE);
+    }
 
-  /**
-   * Wrapper around IMetaStoreClient.deleteTableColumnStatistics() to deal with added
-   * arguments.
-   */
-  public static boolean deleteTableColumnStatistics(IMetaStoreClient client,
-      String dbName, String tableName, String colName)
-      throws NoSuchObjectException, MetaException, InvalidObjectException, TException,
-             InvalidInputException {
-    return client.deleteTableColumnStatistics(dbName, tableName, colName);
-  }
+    /**
+     * Wrapper around IMetaStoreClient.deleteTableColumnStatistics() to deal with added
+     * arguments.
+     */
+    public static boolean deleteTableColumnStatistics(IMetaStoreClient client,
+                                                      String dbName, String tableName, String colName)
+            throws NoSuchObjectException, MetaException, InvalidObjectException, TException,
+            InvalidInputException {
+        return client.deleteTableColumnStatistics(dbName, tableName, colName,/*engine*/IMPALA_ENGINE);
+    }
 
   /**
    * Wrapper around ColumnStatistics c'tor to deal with the added engine property.
@@ -165,13 +170,20 @@ public class MetastoreShim extends Hive3MetastoreShimBase {
     return colStats;
   }
 
-  /**
-   * Wrapper method which returns HMS-3 Message factory in case Impala is
-   * building against Apache Hive-3
-   */
-  public static MessageDeserializer getMessageDeserializer() {
-    return MessageFactory.getInstance().getDeserializer();
-  }
+    private static final MessageEncoder eventMessageEncoder_ =
+            MessageFactory.getDefaultInstance(MetastoreConf.newMetastoreConf());
+
+    /**
+     * Wrapper method which returns HMS-3 Message factory in case Impala is
+     * building against Apache Hive-3
+     */
+    public static MessageDeserializer getMessageDeserializer() {
+        return eventMessageEncoder_.getDeserializer();
+    }
+
+    public static MessageSerializer getMessageSerializer() {
+        return eventMessageEncoder_.getSerializer();
+    }
 
   /**
    * Wrapper around FileUtils.makePartName to deal with package relocation in Hive 3.
