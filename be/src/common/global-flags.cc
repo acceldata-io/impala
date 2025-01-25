@@ -465,8 +465,6 @@ DEFINE_int32(state_store_ha_port, 24020,
       return true; \
     });
 
-REMOVED_FLAG(abfs_read_chunk_size);
-REMOVED_FLAG(adls_read_chunk_size);
 REMOVED_FLAG(authorization_policy_file);
 REMOVED_FLAG(authorization_policy_provider_class);
 REMOVED_FLAG(be_port);
