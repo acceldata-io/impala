@@ -23,7 +23,7 @@ under the License.
   <parent>
     <groupId>org.apache.impala</groupId>
     <artifactId>impala-parent</artifactId>
-    <version>4.4.0.3.3.6.0-1</version>
+    <version>4.4.0.3.2.3.3-3</version>
     <relativePath>../java/pom.xml</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
@@ -33,16 +33,27 @@ under the License.
   <name>Apache Impala Query Engine Frontend</name>
   <repositories>
     <repository>
-            <id>acceldata repo</id>
-            <name>acceldata repo</name>
-            <url>https://repo1.acceldata.dev/repository/odp-central/</url>
-            <releases>
+      <id>acceldata repo</id>
+      <name>acceldata repo</name>
+      <url>https://repo1.acceldata.dev/repository/odp-central/</url>
+      <releases>
         <enabled>true</enabled>
       </releases>
       <snapshots>
         <enabled>true</enabled>
       </snapshots>
-        </repository>
+    </repository>
+    <repository>
+      <id>acceldata staging repo</id>
+      <name>acceldata staging repo</name>
+      <url>https://repo1.acceldata.dev/repository/odp-staging-central/</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
 
   </repositories>
 
