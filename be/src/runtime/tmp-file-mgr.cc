@@ -858,7 +858,7 @@ TmpFileRemote::TmpFileRemote(TmpFileGroup* file_group, TmpFileMgr::DeviceId devi
   } else if (IsOzonePath(hdfs_url, false)) {
     disk_type_ = io::DiskFileType::DFS;
     disk_id_ = file_group->io_mgr_->RemoteOzoneDiskId();
-    disk_id_file_op_ = file_group->io_mgr_->RemoteDfsDiskFileOperId();
+
   } else if (IsS3APath(hdfs_url, false)) {
     disk_type_ = io::DiskFileType::S3;
     disk_id_ = file_group->io_mgr_->RemoteS3DiskId();
@@ -1340,7 +1340,7 @@ Status TmpFileGroup::ReadAsync(TmpWriteHandle* handle, MemRange buffer) {
   // Don't grab handle->write_state_lock_, it is safe to touch all of handle's state
   // since the write is not in flight.
   handle->read_range_ = scan_range_pool_.Add(new ScanRange);
-
+  int64_t offset = handle->write_range_->offset();
   if (handle->file_ != nullptr && !handle->file_->is_local()) {
     TmpFileRemote* tmp_file = static_cast<TmpFileRemote*>(handle->file_);
     DiskFile* disk_buffer_file = tmp_file->DiskBufferFile();
@@ -1348,7 +1348,7 @@ Status TmpFileGroup::ReadAsync(TmpWriteHandle* handle, MemRange buffer) {
     // Reset the read_range, use the remote filesystem's disk id.
     handle->read_range_->Reset(
         ScanRange::FileInfo{
-            remote_file->path().c_str(), tmp_file->hdfs_conn_, tmp_file->mtime_},
+            disk_file->path().c_str(), tmp_file->hdfs_conn_, tmp_file->mtime_},
         handle->write_range_->len(), offset, tmp_file->disk_id(), false,
         BufferOpts::ReadInto(
             read_buffer.data(), read_buffer.len(), BufferOpts::NO_CACHING),

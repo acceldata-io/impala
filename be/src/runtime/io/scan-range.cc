@@ -205,7 +205,7 @@ ReadOutcome ScanRange::DoReadInternal(
   VLOG_FILE << (use_file_handle_cache ? "Using" : "Skipping")
             << " file handle cache for " << (expected_local_ ? "local" : "remote")
             << " file " << file();
-  Status read_status = file_reader->Open(use_file_handle_cache);
+  Status read_status = file_reader->Open();
   bool eof = false;
   if (read_status.ok()) {
     COUNTER_ADD_IF_NOT_NULL(reader_->active_read_thread_counter_, 1L);
