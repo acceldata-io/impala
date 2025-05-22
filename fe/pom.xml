@@ -118,11 +118,11 @@ under the License.
       </exclusions>
     </dependency>
 
-<dependency>
-    <groupId>org.apache.hive</groupId>
-    <artifactId>hive-metastore</artifactId>
-    <version>4.0.0</version>
-</dependency>
+   <dependency>
+      <groupId>org.apache.hive</groupId>
+      <artifactId>hive-metastore</artifactId>
+      <version>${hive.version}</version>
+   </dependency>
 
     <dependency>
       <groupId>org.apache.hudi</groupId>
