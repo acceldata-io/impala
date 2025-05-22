@@ -256,18 +256,19 @@ fi
 export IMPALA_TOOLCHAIN_HOST
 
 export CDP_BUILD_NUMBER=45689292
+export ODP_BUILD_NUMBER=3.3.6.0-1
 export CDP_MAVEN_REPOSITORY=\
 "https://${IMPALA_TOOLCHAIN_HOST}/build/cdp_components/${CDP_BUILD_NUMBER}/maven"
-export CDP_AVRO_JAVA_VERSION=1.8.2.7.2.18.0-369
-export CDP_HADOOP_VERSION=3.1.1.7.2.18.0-369
-export CDP_HBASE_VERSION=2.4.17.7.2.18.0-369
-export CDP_HIVE_VERSION=3.1.3000.7.2.18.0-369
-export CDP_ICEBERG_VERSION=1.3.1.7.2.18.0-369
-export CDP_KNOX_VERSION=1.3.0.7.2.18.0-369
-export CDP_OZONE_VERSION=1.3.0.7.2.18.0-369
-export CDP_PARQUET_VERSION=1.10.99.7.2.18.0-369
-export CDP_RANGER_VERSION=2.4.0.7.2.18.0-369
-export CDP_TEZ_VERSION=0.9.1.7.2.18.0-369
+export CDP_KNOX_VERSION=2.0.0.3.3.6.0-1
+export CDP_OZONE_VERSION=1.4.0.3.3.6.0-1
+export CDP_PARQUET_VERSION=1.13.1
+export CDP_RANGER_VERSION=2.5.0.3.3.6.0-1
+export CDP_TEZ_VERSION=0.10.3.3.3.6.0-1
+export CDP_KNOX_VERSION=2.0.0.3.3.6.0-1
+export CDP_OZONE_VERSION=1.4.0.3.3.6.0-1
+export CDP_PARQUET_VERSION=1.13.1
+export CDP_RANGER_VERSION=2.5.0.3.3.6.0-1
+export CDP_TEZ_VERSION=0.10.3.3.3.6.0-1
 
 # Ref: https://infra.apache.org/release-download-pages.html#closer
 : ${APACHE_MIRROR:="https://www.apache.org/dyn/closer.cgi"}
@@ -382,7 +383,7 @@ export IMPALA_ICEBERG_VERSION=${CDP_ICEBERG_VERSION}
 export IMPALA_ICEBERG_URL=${CDP_ICEBERG_URL-}
 export IMPALA_KNOX_VERSION=${CDP_KNOX_VERSION}
 export IMPALA_PARQUET_VERSION=${CDP_PARQUET_VERSION}
-export IMPALA_RANGER_VERSION=${CDP_RANGER_VERSION}
+export IMPALA_RANGER_VERSION=${RANGER_VERSION_OVERRIDE:-"$CDP_RANGER_VERSION"}
 export IMPALA_RANGER_URL=${CDP_RANGER_URL-}
 export IMPALA_TEZ_VERSION=${CDP_TEZ_VERSION}
 export IMPALA_TEZ_URL=${CDP_TEZ_URL-}
@@ -399,7 +400,7 @@ if $USE_APACHE_HIVE; then
 else
   # CDP hive version is used to build and deploy in minicluster when USE_APACHE_HIVE is
   # false
-  export IMPALA_HIVE_DIST_TYPE="hive"
+  export IMPALA_HIVE_DIST_TYPE="apache-hive"
   export IMPALA_HIVE_VERSION=${HIVE_VERSION_OVERRIDE:-"$CDP_HIVE_VERSION"}
   export IMPALA_HIVE_URL=${CDP_HIVE_URL-}
   export IMPALA_HIVE_SOURCE_URL=${CDP_HIVE_SOURCE_URL-}
@@ -641,7 +642,7 @@ else
   export HIVE_HOME=${HIVE_HOME_OVERRIDE:-\
 "$CDP_COMPONENTS_HOME/apache-hive-${IMPALA_HIVE_VERSION}-bin"}
   export HIVE_SRC_DIR=${HIVE_SRC_DIR_OVERRIDE:-\
-"${CDP_COMPONENTS_HOME}/hive-${IMPALA_HIVE_VERSION}"}
+"${CDP_COMPONENTS_HOME}/apache-hive-${IMPALA_HIVE_VERSION}-src"}
   # Previously, there were multiple configurations and the "_cdp" included below
   # allowed the two to be distinct. We keep this "_cdp" for historical reasons.
   export METASTORE_DB=${METASTORE_DB-"$(cut -c-59 <<< HMS$ESCAPED_DB_UID)_cdp"}
