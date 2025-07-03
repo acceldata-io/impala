@@ -389,12 +389,30 @@ class OdpKudu(EnvVersionedPackage):
           "$IMPALA_TOOLCHAIN_PACKAGES_HOME is set.")
       sys.exit(1)
     
-    # Set up template substitutions for ODP mirror URL
-    template_subs = {"odp_build_number": os.environ["ODP_BUILD_NUMBER"]}
-    url_prefix_tmpl = "https://mirror.odp.acceldata.dev/ODP/standalone/${odp_build_number}/"
+    # Check for custom Kudu URL from environment variable
+    custom_kudu_url = os.environ.get("ODP_KUDU_DIRECT_URL")
+    
+    if custom_kudu_url:
+      # Use custom direct URL from environment variable
+      logging.info("Using custom Kudu URL from ODP_KUDU_DIRECT_URL: %s", custom_kudu_url)
+      
+      # Extract the filename from the direct URL
+      archive_name = custom_kudu_url.split('/')[-1]
+      archive_basename = archive_name.replace('.tar.gz', '')
+
+      # For direct file URLs, split the URL to get the base path
+      url_parts = custom_kudu_url.rsplit('/', 1)
+      url_prefix_tmpl = url_parts[0] + "/"
+      template_subs = {}
+    else:
+      # Use default ODP mirror URL pattern
+      logging.info("Using default ODP mirror URL pattern for Kudu")
+      template_subs = {"odp_build_number": os.environ["ODP_BUILD_NUMBER"]}
+      url_prefix_tmpl = "https://mirror.odp.acceldata.dev/ODP/standalone/${odp_build_number}/"
+      archive_basename = "kudu-${version}-src" 
     
     super(OdpKudu, self).__init__("kudu", url_prefix_tmpl, toolchain_packages_home,
-                                  archive_basename_tmpl="kudu-${version}-src",
+                                  archive_basename_tmpl=archive_basename,
                                   unpack_directory_tmpl="kudu-${version}",
                                   template_subs_in=template_subs)
 

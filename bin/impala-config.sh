@@ -78,6 +78,7 @@ export USE_APACHE_HIVE=${USE_APACHE_HIVE-false}
 
 # Whether to download Kudu from ODP mirror instead of native toolchain S3
 export USE_ODP_KUDU=${USE_ODP_KUDU-true}
+export ODP_KUDU_DIRECT_URL=${ODP_KUDU_DIRECT_URL-}
 
 # Whether to build the backend on Avro C++ library or C.
 # This is added temporarily to help transitioning from Avro C to C++ library.
