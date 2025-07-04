@@ -70,7 +70,7 @@ import org.apache.kudu.client.KuduPredicate.ComparisonOp;
 import org.apache.kudu.client.KuduScanToken;
 import org.apache.kudu.client.KuduScanToken.KuduScanTokenBuilder;
 import org.apache.kudu.client.LocatedTablet;
-// import org.apache.kudu.consensus.Metadata.RaftPeerPB.Role; // Disabled for frontend-only build
+import org.apache.kudu.consensus.Metadata.RaftPeerPB.Role; // Disabled for frontend-only build
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
