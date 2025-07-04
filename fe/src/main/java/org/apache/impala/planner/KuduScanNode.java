@@ -70,7 +70,7 @@ import org.apache.kudu.client.KuduPredicate.ComparisonOp;
 import org.apache.kudu.client.KuduScanToken;
 import org.apache.kudu.client.KuduScanToken.KuduScanTokenBuilder;
 import org.apache.kudu.client.LocatedTablet;
-import org.apache.kudu.consensus.Metadata.RaftPeerPB.Role;
+// import org.apache.kudu.consensus.Metadata.RaftPeerPB.Role; // Disabled for frontend-only build
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -253,7 +253,7 @@ public class KuduScanNode extends ScanNode {
         // Skip non-leader replicas if query option KUDU_REPLICA_SELECTION is set as
         // LEADER_ONLY.
         if (replicaSelectionLeaderOnly_
-            && !replica.getRole().equals(Role.LEADER.toString())) {
+            && !replica.getRole().equals("LEADER")) {
           continue;
         }
 
