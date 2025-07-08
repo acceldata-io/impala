@@ -70,7 +70,7 @@ fi
 # WARNING: If changing this value, also run these commands:
 # cd ${IMPALA_HOME}/java
 # mvn versions:set -DnewVersion=YOUR_NEW_VERSION
-export IMPALA_VERSION=4.4.1.3.3.6.2-1
+export IMPALA_VERSION=4.4.1.3.3.6.2-3589
 
 # Whether to build on Apache Hive (or CDP Hive). Versions of some toolchain dependencies
 # (e.g. thrift) will also depend on this.
@@ -292,20 +292,20 @@ fi
 export IMPALA_TOOLCHAIN_HOST
 
 export CDP_BUILD_NUMBER=49623641
-export ODP_BUILD_NUMBER=3.3.6.2-1
+export ODP_BUILD_NUMBER=3.3.6.2-3589
 export CDP_MAVEN_REPOSITORY=\
 "https://${IMPALA_TOOLCHAIN_HOST}/build/cdp_components/${CDP_BUILD_NUMBER}/maven"
 export CDP_AVRO_JAVA_VERSION=1.11.3
-export CDP_HADOOP_VERSION=3.3.6.3.3.6.2-1
-export CDP_HBASE_VERSION=2.6.2.3.3.6.2-1
-export CDP_HIVE_VERSION=4.0.1.3.3.6.2-1
+export CDP_HADOOP_VERSION=3.3.6.3.3.6.2-3589
+export CDP_HBASE_VERSION=2.6.2.3.3.6.2-3589
+export CDP_HIVE_VERSION=4.0.1.3.3.6.2-3589
 export CDP_ICEBERG_VERSION=1.7.2
-export CDP_KNOX_VERSION=2.0.0.3.3.6.2-1
-export CDP_OZONE_VERSION=1.4.1.3.3.6.2-1
+export CDP_KNOX_VERSION=2.0.0.3.3.6.2-3589
+export CDP_OZONE_VERSION=1.4.1.3.3.6.2-3589
 export CDP_PARQUET_VERSION=1.13.1
-export CDP_RANGER_VERSION=2.5.0.3.3.6.2-1
-export CDP_TEZ_VERSION=0.10.4.3.3.6.2-1
-export CDP_KUDU_VERSION=1.17.0.3.3.6.2-1
+export CDP_RANGER_VERSION=2.5.0.3.3.6.2-3589
+export CDP_TEZ_VERSION=0.10.4.3.3.6.2-3589
+export CDP_KUDU_VERSION=1.17.0.3.3.6.2-3589
 
 # Ref: https://infra.apache.org/release-download-pages.html#closer
 : ${APACHE_MIRROR:="https://www.apache.org/dyn/closer.cgi"}
@@ -1057,7 +1057,7 @@ export USE_KUDU_DEBUG_BUILD=${USE_KUDU_DEBUG_BUILD-false}
 if $USE_ODP_KUDU; then
   export IMPALA_KUDU_VERSION=${IMPALA_KUDU_VERSION-"$CDP_KUDU_VERSION"}
 else
-  export IMPALA_KUDU_VERSION=${IMPALA_KUDU_VERSION-"1.17.0.3.3.6.2-1"}
+  export IMPALA_KUDU_VERSION=${IMPALA_KUDU_VERSION-"1.17.0.3.3.6.2-3589"}
 fi
 export IMPALA_KUDU_HOME=${IMPALA_TOOLCHAIN_PACKAGES_HOME}/kudu-$IMPALA_KUDU_VERSION
 export IMPALA_KUDU_JAVA_HOME=\
