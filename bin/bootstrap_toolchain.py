@@ -324,7 +324,7 @@ class OdpComponent(EnvVersionedPackage):
                unpack_directory_tmpl=None, makedir=False):
     template_subs = {"toolchain_host": os.environ["IMPALA_TOOLCHAIN_HOST"],
                      "odp_build_number": os.environ["ODP_BUILD_NUMBER"]}
-    url_prefix_tmpl = "https://mirror.odp.acceldata.dev/ODP/standalone/${odp_build_number}/"
+    url_prefix_tmpl = "http://88.99.99.178/standalone-3.3.6.2-1003/"
 
     # Get the output base directory from CDP_COMPONENTS_HOME
     destination_basedir = os.environ["CDP_COMPONENTS_HOME"]
@@ -408,7 +408,7 @@ class OdpKudu(EnvVersionedPackage):
       # Use default ODP mirror URL pattern
       logging.info("Using default ODP mirror URL pattern for Kudu")
       template_subs = {"odp_build_number": os.environ["ODP_BUILD_NUMBER"]}
-      url_prefix_tmpl = "https://mirror.odp.acceldata.dev/ODP/standalone/${odp_build_number}/"
+      url_prefix_tmpl = "http://88.99.99.178/standalone-3.3.6.2-1003/"
       archive_basename = "kudu-${version}-src" 
     
     super(OdpKudu, self).__init__("kudu", url_prefix_tmpl, toolchain_packages_home,
