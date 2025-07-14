@@ -241,8 +241,9 @@ class EnvVersionedPackage(TemplatedDownloadUnpackTarball):
 
 
 class ToolchainPackage(EnvVersionedPackage):
-  def __init__(self, name, explicit_version=None, platform_release=None):
-    toolchain_packages_home = os.environ.get("IMPALA_TOOLCHAIN_PACKAGES_HOME")
+  def __init__(self, name, explicit_version=None, platform_release=None, toolchain_packages_home=None):
+    if toolchain_packages_home is None:
+      toolchain_packages_home = os.environ.get("IMPALA_TOOLCHAIN_PACKAGES_HOME")
     if not toolchain_packages_home:
       logging.error("Impala environment not set up correctly, make sure "
           "$IMPALA_TOOLCHAIN_PACKAGES_HOME is set.")
@@ -359,10 +360,100 @@ class ApacheComponent(EnvVersionedPackage):
                                        unpack_directory_tmpl=unpack_directory_tmpl,
                                        makedir=makedir, template_subs_in=template_subs)
 
+class BuildToolchainKuduTar():
+  """
+  Build kudu tar using impala build toolchain.
+  """
+  def __init__(self):
+    self.toolchain_kudu_path = self._get_env_var("ODP_KUDU_TARBALL_PATH")
+    self.toolchain_packages_home = self._get_env_var("IMPALA_TOOLCHAIN_PACKAGES_HOME")
+    self.arch = platform.machine()
+    if self.arch not in ['aarch64', 'x86_64']:
+      raise Exception(f"Unsupported architecture '{self.arch}' for pre-built native-toolchain. "
+                      "Fetch and build it locally by setting NATIVE_TOOLCHAIN_HOME")
+
+  def _get_env_var(self, var_name, required=True):
+    value = os.environ.get(var_name)
+    if required and not value:
+      logging.error(f"{var_name} is not set.")
+      sys.exit(1)
+    return value
+
+  def clone_toolchain_repo(self):
+    toolchain_repo_home = os.environ.get("NATIVE_TOOLCHAIN_HOME") or \
+        f"{os.environ.get('IMPALA_HOME')}/native-toolchain"
+    if not toolchain_repo_home:
+      logging.error("toolchain repo home is not set. Please set it to the path where "
+                    "the native toolchain repository is cloned.")
+      sys.exit(1)
+    if not os.path.exists(toolchain_repo_home):
+      logging.info(f"Cloning native toolchain repository to {toolchain_repo_home}")
+      repo_url = os.environ.get("IMPALA_TOOLCHAIN_REPO", "").replace(
+        "https://github.com/", "git@github.com:")
+      subprocess.check_call(["git", "clone", repo_url, toolchain_repo_home])
+    else:
+      logging.info(f"Native toolchain repository already exists at {toolchain_repo_home}")
+    return toolchain_repo_home
+
+  def check_kudu_tar_exists(self):
+    if not os.path.isfile(self.toolchain_kudu_path):
+      logging.warn(f"Kudu tarball does not exist at {self.toolchain_kudu_path}")
+    upstream_url = f"https://mirror.odp.acceldata.dev/ODP/standalone/{os.environ.get('ODP_BUILD_NUMBER')}/kudu-{os.environ.get('CDP_KUDU_VERSION')}.tar.gz"
+    try:
+      subprocess.check_call(["wget", "-q", upstream_url, "-O", self.toolchain_kudu_path])
+      logging.info(f"Upstream Kudu tarball exists at {upstream_url}")
+    except subprocess.CalledProcessError:
+      logging.warn(f"Upstream Kudu tarball does not exist at {upstream_url}")
+    return os.path.isfile(self.toolchain_kudu_path)
+
+  def build_kudu_tar(self):
+    if self.check_kudu_tar_exists():
+      logging.info("Kudu tarball already exists, skipping build.")
+      return
+    toolchain_repo_home = self.clone_toolchain_repo()
+    kudu_version = self._get_env_var('CDP_KUDU_VERSION')
+    build_script_path = os.path.join(toolchain_repo_home, "build-kudu-only.sh")
+    if not os.path.exists(build_script_path):
+      logging.error(f"Build script not found at {build_script_path}")
+      sys.exit(1)
+    toolchain_packages_home = f"{os.environ.get('IMPALA_HOME')}/native-toolchain/build"
+    os.makedirs(toolchain_packages_home, exist_ok=True)
+    tool_list = ["binutils", "gdb", "gcc", "cmake", "python", "boost"]
+    for tool in tool_list:
+      version = os.environ.get(f"IMPALA_{tool.upper()}_VERSION")
+      if tool == "python":
+        version = os.environ.get("IMPALA_PYTHON3_VERSION")
+      toolchain_package = ToolchainPackage(tool, explicit_version=version,
+                                           toolchain_packages_home=toolchain_packages_home)
+      if toolchain_package.needs_download():
+        logging.info(f"Downloading toolchain package: {tool}")
+        toolchain_package.download()
+      else:
+        logging.info(f"Toolchain package {tool} already exists at {toolchain_package.pkg_directory()}")
+    env = os.environ.copy()
+    env.update({
+      "CXXFLAGS": "-O2",
+      "CFLAGS": "-O2",
+      # "MAKEFLAGS": "-j20",
+      # "BUILD_THREADS": "20",
+      "USE_CCACHE": "0",
+      "BUILD_LABEL": "impala-kudu-001",
+      "BUILD_DIR": os.environ.get("IMPALA_TOOLCHAIN_PACKAGES_HOME"),
+      "COMPILER": "gcc-10.4.0",
+      "COMPILER_VERSION": os.environ.get("IMPALA_GCC_VERSION"),
+      "PUBLISH_DEPENDENCIES": "0",
+      "FAIL_ON_PUBLISH": "0",
+      "CLEAN_TMP_AFTER_BUILD": "1",
+      "SYSTEM_GCC": "0",
+      "KUDU_VERSION": kudu_version
+    })
+    subprocess.check_call(["bash", "-c", "./build-kudu-only.sh"], env=env, cwd=toolchain_repo_home)
+    logging.info(f"Kudu tar built successfully. The tarball is located at {toolchain_packages_home}/kudu-{kudu_version}.tar.gz")
+
 
 class ToolchainKudu(DownloadUnpackTarball):
   """
-  Unpacks a Kudu toolchain tarball from a local path specified by ODP_KUDU_TARBALL_PATH.
+  Unpacks a Kudu toolchain from a tarball downloaded from the ODP mirror.
   """
   def __init__(self, platform_label=None):
     toolchain_kudu_path = os.environ.get('ODP_KUDU_TARBALL_PATH')
@@ -400,7 +491,6 @@ class ToolchainKudu(DownloadUnpackTarball):
     subprocess.check_call([
       "tar", "xzf", self.local_archive_path, "--directory={0}".format(self.destination_basedir)
     ])
-
 
 class OdpKudu(EnvVersionedPackage):
   """
@@ -642,7 +732,8 @@ def get_kudu_downloads():
     return [OdpKudu()]
   else:
     # Use native toolchain Kudu (original behavior)
-    logging.info("Using native toolchain for Kudu download")
+    logging.info("Using native toolchain for Kudu build and consumption")
+    BuildToolchainKuduTar().build_kudu_tar()
     return [ToolchainKudu()]
 
 
