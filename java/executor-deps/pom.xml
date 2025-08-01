@@ -93,10 +93,6 @@ under the License.
            version of this dependency is used instead. -->
       <exclusions>
         <exclusion>
-          <groupId>com.amazonaws</groupId>
-          <artifactId>aws-java-sdk-bundle</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>com.cloudera</groupId>
           <artifactId>jwtprovider-api</artifactId>
         </exclusion>
