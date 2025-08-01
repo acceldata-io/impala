@@ -89,8 +89,6 @@ under the License.
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-cloud-storage</artifactId>
       <version>${hadoop.version}</version>
-      <!-- Exclude the aws-java-sdk-bundle dependency because the Impala minimal
-           version of this dependency is used instead. -->
       <exclusions>
         <exclusion>
           <groupId>com.cloudera</groupId>
