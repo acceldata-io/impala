@@ -301,6 +301,7 @@ export CDP_OZONE_VERSION=1.4.1.3.3.6.2-1
 export CDP_PARQUET_VERSION=1.13.1
 export CDP_RANGER_VERSION=2.5.0.3.3.6.2-1
 export CDP_TEZ_VERSION=0.10.4.3.3.6.2-1
+export CDP_KUDU_VERSION=1.17.0.3.3.6.2-1
 
 # Ref: https://infra.apache.org/release-download-pages.html#closer
 : ${APACHE_MIRROR:="https://www.apache.org/dyn/closer.cgi"}
@@ -352,6 +353,12 @@ export IMPALA_DOCKER_JAVA=${IMPALA_DOCKER_JAVA:-"8"}
 if [ "${IMPALA_DOCKER_USE_JAVA11:-}" = "true" ]; then
   export IMPALA_DOCKER_JAVA=11
 fi
+
+export USE_ODP_KUDU=${USE_ODP_KUDU-true}
+export ODP_KUDU_DIRECT_URL=${ODP_KUDU_DIRECT_URL-}
+
+export USE_LOCAL_KUDU_TARBALL==${USE_LOCAL_KUDU_TARBALL-true}
+export ODP_KUDU_TARBALL_PATH=${ODP_KUDU_TARBALL_PATH:-$IMPALA_HOME/kudu-$CDP_KUDU_VERSION-gcc-$IMPALA_GCC_VERSION.tar.gz}
 
 # There are multiple compatible implementations of zlib. Cloudflare Zlib is an
 # implementation with optimizations to use platform-specific CPU features that are not
@@ -1049,7 +1056,12 @@ fi
 # overall build type) and does not apply when using a local Kudu build.
 export USE_KUDU_DEBUG_BUILD=${USE_KUDU_DEBUG_BUILD-false}
 
-export IMPALA_KUDU_VERSION=${IMPALA_KUDU_VERSION-"e742f86f6d"}
+if [[ ${USE_ODP_KUDU} == true || ${USE_LOCAL_KUDU_TARBALL} == true ]]; then
+  export IMPALA_KUDU_VERSION=${IMPALA_KUDU_VERSION-"$CDP_KUDU_VERSION"}
+else
+  export IMPALA_KUDU_VERSION=${IMPALA_KUDU_VERSION-"e742f86f6d"}
+fi
+
 export IMPALA_KUDU_HOME=${IMPALA_TOOLCHAIN_PACKAGES_HOME}/kudu-$IMPALA_KUDU_VERSION
 export IMPALA_KUDU_JAVA_HOME=\
 ${IMPALA_TOOLCHAIN_PACKAGES_HOME}/kudu-${IMPALA_KUDU_VERSION}/java
