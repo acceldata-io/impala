@@ -70,7 +70,7 @@ fi
 # WARNING: If changing this value, also run these commands:
 # cd ${IMPALA_HOME}/java
 # mvn versions:set -DnewVersion=YOUR_NEW_VERSION
-export IMPALA_VERSION=4.4.1.3.3.6.1-SNAPSHOT
+export IMPALA_VERSION=4.4.1.3.3.6.2-1
 
 # Whether to build on Apache Hive (or CDP Hive). Versions of some toolchain dependencies
 # (e.g. thrift) will also depend on this.
@@ -288,19 +288,19 @@ fi
 export IMPALA_TOOLCHAIN_HOST
 
 export CDP_BUILD_NUMBER=49623641
-export ODP_BUILD_NUMBER=3.3.6.1-SNAPSHOT
+export ODP_BUILD_NUMBER=3.3.6.2-1
 export CDP_MAVEN_REPOSITORY=\
 "https://${IMPALA_TOOLCHAIN_HOST}/build/cdp_components/${CDP_BUILD_NUMBER}/maven"
 export CDP_AVRO_JAVA_VERSION=1.11.3
-export CDP_HADOOP_VERSION=3.3.6.3.3.6.1-SNAPSHOT
-export CDP_HBASE_VERSION=2.6.2.3.3.6.1-SNAPSHOT
-export CDP_HIVE_VERSION=4.0.0.3.3.6.1-SNAPSHOT
-export CDP_ICEBERG_VERSION=1.3.1.7.3.0.0-128
-export CDP_KNOX_VERSION=2.0.0.3.3.6.1-SNAPSHOT
-export CDP_OZONE_VERSION=1.4.1.3.3.6.1-SNAPSHOT
+export CDP_HADOOP_VERSION=3.3.6.3.3.6.2-1
+export CDP_HBASE_VERSION=2.6.2.3.3.6.2-1
+export CDP_HIVE_VERSION=4.0.1.3.3.6.2-1
+export CDP_ICEBERG_VERSION=1.7.2
+export CDP_KNOX_VERSION=2.0.0.3.3.6.2-1
+export CDP_OZONE_VERSION=1.4.1.3.3.6.2-1
 export CDP_PARQUET_VERSION=1.13.1
-export CDP_RANGER_VERSION=2.5.0.3.3.6.1-SNAPSHOT
-export CDP_TEZ_VERSION=0.10.3.3.3.6.1-SNAPSHOT
+export CDP_RANGER_VERSION=2.5.0.3.3.6.2-1
+export CDP_TEZ_VERSION=0.10.4.3.3.6.2-1
 
 # Ref: https://infra.apache.org/release-download-pages.html#closer
 : ${APACHE_MIRROR:="https://www.apache.org/dyn/closer.cgi"}
@@ -314,7 +314,7 @@ export ARCH_NAME=$(uname -p)
 # Java dependencies that are not also runtime components. Declaring versions here allows
 # other branches to override them in impala-config-branch.sh for cleaner patches.
 export IMPALA_BOUNCY_CASTLE_VERSION=1.78
-export IMPALA_COS_VERSION=3.1.0-8.0.8
+export IMPALA_COS_VERSION=3.4.0-8.3.22
 export IMPALA_DERBY_VERSION=10.14.2.0
 export IMPALA_GUAVA_VERSION=32.0.1-jre
 export IMPALA_HUDI_VERSION=0.5.0-incubating
@@ -324,7 +324,7 @@ export IMPALA_JSON_SMART_VERSION=2.4.11
 export IMPALA_JUNIT_VERSION=4.12
 export IMPALA_KITE_VERSION=1.1.0
 export IMPALA_LOG4J2_VERSION=2.18.0
-export IMPALA_ORC_JAVA_VERSION=1.7.6
+export IMPALA_ORC_JAVA_VERSION=1.8.5
 export IMPALA_PAC4J_VERSION=4.5.5
 export IMPALA_RELOAD4j_VERSION=1.2.22
 export IMPALA_SLF4J_VERSION=2.0.3
