@@ -80,6 +80,7 @@ under the License.
     <json-smart.version>${env.IMPALA_JSON_SMART_VERSION}</json-smart.version>
     <commons-dbcp2.version>${env.IMPALA_DBCP2_VERSION}</commons-dbcp2.version>
     <log4j2.version>${env.IMPALA_LOG4J2_VERSION}</log4j2.version>
+    <aws_java_sdk_bundle.version>${env.IMPALA_AWS_JAVA_SDK_BUNDLE_VERSION}</aws_java_sdk_bundle.version>
   </properties>
 
   <repositories>
