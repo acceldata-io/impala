@@ -316,6 +316,7 @@ export IMPALA_DBCP2_VERSION=2.9.0
 export IMPALA_DROPWIZARD_METRICS_VERSION=4.2.26
 export IMPALA_AIRCOMPRESSOR_VERSION=0.27
 export IMPALA_DATASKETCHES_VERSION=6.0.0
+export IMPALA_AWS_JAVA_SDK_BUNDLE_VERSION=1.12.782
 
 # When Impala is building docker images on Redhat-based distributions,
 # it is useful to be able to customize the base image. Some users will
