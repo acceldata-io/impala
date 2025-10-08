@@ -15,9 +15,9 @@ ext-py/sasl-0.3.1/sasl.egg-info/
 ext-py/six-1.14.0/dist/
 ext-py/six-1.14.0/build/
 ext-py/six-1.14.0/six.egg-info/
-ext-py/sqlparse-0.3.1/dist/
-ext-py/sqlparse-0.3.1/build/
-ext-py/sqlparse-0.3.1/sqlparse.egg-info/
+ext-py/sqlparse-0.4.4/dist/
+ext-py/sqlparse-0.4.4/build/
+ext-py/sqlparse-0.4.4/sqlparse.egg-info/
 ext-py/thrift-0.16.0/dist/
 ext-py/thrift-0.16.0/build/
 ext-py/thrift-0.16.0/thrift.egg-info/
