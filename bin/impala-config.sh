@@ -256,7 +256,7 @@ if command -v ambari-python-wrap >/dev/null || [ -n "$IMPALA_SYSTEM_PYTHON3_OVER
         # CMakeLists.txt expects the binary to match exactly python3, so we create a symlink
         ln -sv "$(command -v ambari-python-wrap)" /tmp/acceldata-python/python3
         export IMPALA_SYSTEM_PYTHON3="/tmp/acceldata-python/python3"
-    else 
+    else
         export IMPALA_SYSTEM_PYTHON3="$IMPALA_SYSTEM_PYTHON3_OVERRIDE"
     fi
 fi
@@ -291,7 +291,7 @@ export CDP_BUILD_NUMBER=49623641
 export ODP_BUILD_NUMBER=3.2.3.4-2001
 export CDP_MAVEN_REPOSITORY=\
 "https://${IMPALA_TOOLCHAIN_HOST}/build/cdp_components/${CDP_BUILD_NUMBER}/maven"
-export CDP_AVRO_JAVA_VERSION=1.11.3
+export CDP_AVRO_JAVA_VERSION=1.11.4
 export CDP_HADOOP_VERSION=3.2.3.3.2.3.4-2001
 export CDP_HBASE_VERSION=2.6.2.3.2.3.4-2001
 export CDP_HIVE_VERSION=3.1.4.3.2.3.4-2001
