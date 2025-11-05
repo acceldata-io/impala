@@ -46,7 +46,7 @@ under the License.
     <repository>
       <id>acceldata staging repo</id>
       <name>acceldata staging repo</name>
-      <url>https://repo1.acceldata.dev/repository/odp-staging-central/</url>
+      <url>https://repo1.acceldata.dev/repository/odp-central/</url>
       <releases>
         <enabled>true</enabled>
       </releases>
