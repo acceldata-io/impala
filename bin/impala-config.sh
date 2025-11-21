@@ -70,7 +70,7 @@ fi
 # WARNING: If changing this value, also run these commands:
 # cd ${IMPALA_HOME}/java
 # mvn versions:set -DnewVersion=YOUR_NEW_VERSION
-export IMPALA_VERSION=4.4.0.3.2.3.3.2
+export IMPALA_VERSION=4.4.0.3.2.3.4-SNAPSHOT
 
 # Whether to build on Apache Hive (or CDP Hive). Versions of some toolchain dependencies
 # (e.g. thrift) will also depend on this.
@@ -256,7 +256,7 @@ if command -v ambari-python-wrap >/dev/null || [ -n "$IMPALA_SYSTEM_PYTHON3_OVER
         # CMakeLists.txt expects the binary to match exactly python3, so we create a symlink
         ln -sv "$(command -v ambari-python-wrap)" /tmp/acceldata-python/python3
         export IMPALA_SYSTEM_PYTHON3="/tmp/acceldata-python/python3"
-    else 
+    else
         export IMPALA_SYSTEM_PYTHON3="$IMPALA_SYSTEM_PYTHON3_OVERRIDE"
     fi
 fi
@@ -288,19 +288,19 @@ fi
 export IMPALA_TOOLCHAIN_HOST
 
 export CDP_BUILD_NUMBER=49623641
-export ODP_BUILD_NUMBER=3.2.3.3-SNAPSHOT
+export ODP_BUILD_NUMBER=3.2.3.4-SNAPSHOT
 export CDP_MAVEN_REPOSITORY=\
 "https://${IMPALA_TOOLCHAIN_HOST}/build/cdp_components/${CDP_BUILD_NUMBER}/maven"
-export CDP_AVRO_JAVA_VERSION=1.11.3
-export CDP_HADOOP_VERSION=3.2.3.3.2.3.3-SNAPSHOT
-export CDP_HBASE_VERSION=2.4.11.3.2.3.3-SNAPSHOT
-export CDP_HIVE_VERSION=3.1.4.3.2.3.3-SNAPSHOT
-export CDP_ICEBERG_VERSION=1.3.1.7.3.0.0-128
-export CDP_KNOX_VERSION=1.6.1.3.2.3.3-SNAPSHOT
-export CDP_OZONE_VERSION=1.4.0.3.2.3.3-SNAPSHOT
-export CDP_PARQUET_VERSION=1.13.1
-export CDP_RANGER_VERSION=2.3.0.3.2.3.3-SNAPSHOT
-export CDP_TEZ_VERSION=0.10.1.3.2.3.3-SNAPSHOT
+export CDP_AVRO_JAVA_VERSION=1.11.4
+export CDP_HADOOP_VERSION=3.2.3.3.2.3.4-SNAPSHOT
+export CDP_HBASE_VERSION=2.5.10.3.2.3.4-SNAPSHOT
+export CDP_HIVE_VERSION=3.1.4.3.2.3.4-SNAPSHOT
+export CDP_ICEBERG_VERSION=1.6.1
+export CDP_KNOX_VERSION=2.0.0.3.2.3.4-SNAPSHOT
+export CDP_OZONE_VERSION=1.4.1.3.2.3.4-SNAPSHOT
+export CDP_PARQUET_VERSION=1.15.2
+export CDP_RANGER_VERSION=2.5.0.3.2.3.4-SNAPSHOT
+export CDP_TEZ_VERSION=0.10.1.3.2.3.4-SNAPSHOT
 
 # Ref: https://infra.apache.org/release-download-pages.html#closer
 : ${APACHE_MIRROR:="https://www.apache.org/dyn/closer.cgi"}
