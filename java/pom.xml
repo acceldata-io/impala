@@ -21,7 +21,7 @@ under the License.
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.impala</groupId>
   <artifactId>impala-parent</artifactId>
-  <version>4.4.0.3.2.3.4-SNAPSHOT</version>
+  <version>4.4.0.3.2.3.5-2</version>
   <packaging>pom</packaging>
   <name>Apache Impala Parent POM</name>
   <!--
@@ -80,6 +80,7 @@ under the License.
     <json-smart.version>${env.IMPALA_JSON_SMART_VERSION}</json-smart.version>
     <commons-dbcp2.version>${env.IMPALA_DBCP2_VERSION}</commons-dbcp2.version>
     <log4j2.version>${env.IMPALA_LOG4J2_VERSION}</log4j2.version>
+    <aws_java_sdk_bundle.version>${env.IMPALA_AWS_JAVA_SDK_BUNDLE_VERSION}</aws_java_sdk_bundle.version>
   </properties>
 
   <repositories>
