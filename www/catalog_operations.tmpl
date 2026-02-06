@@ -1,0 +1,169 @@
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+{{> www/common-header.tmpl }}
+
+<h2>Catalog operations</h2>
+
+<div class="panel panel-info">
+<div class="card">
+  <div class="card-header">
+      <h5 class="card-title">
+      In-progress Catalog Operations Summary
+      </h5>
+  </div>
+  <div class="card-body">
+    <table id=summary class='table table-hover table-bordered'>
+      <thead>
+        <tr>
+          <th>Operation</th>
+          <th>Number of requests</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#catalog_op_summary}}
+        <tr>
+          <td>{{catalog_op_name}}</td>
+          <td>{{op_counter}}</td>
+        </tr>
+        {{/catalog_op_summary}}
+      </tbody>
+    </table>
+    <table id=operations class='table table-hover table-bordered'>
+      <thead>
+        <tr>
+          <th>Table</th>
+          <th>Number of requests</th>
+          <th>Operations</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#catalog_op_list}}
+        <tr>
+          <td>{{table_name}}</td>
+          <td>{{op_counter}}</td>
+          <td>{{catalog_op_name}}</td>
+        </tr>
+        {{/catalog_op_list}}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        $('#summary').DataTable({
+            "order": [[ 1, "desc" ]],
+            "pageLength": 10
+        });
+        $('#operations').DataTable({
+            "order": [[ 1, "desc" ]],
+            "pageLength": 10
+        });
+    });
+</script>
+
+<div class="panel panel-info">
+<div class="card">
+  <div class="card-header">
+      <h5 class="card-title">
+      In-progress Catalog Operations
+      </h5>
+  </div>
+  <div class="card-body">
+    <table id="inflight_operations" class='table table-hover table-border'>
+      <tr>
+        <th>Thread ID</th>
+        <th>Query ID</th>
+        <th>Client IP</th>
+        <th>Coordinator</th>
+        <th>Type</th>
+        <th>Target</th>
+        <th>User</th>
+        <th>Start Time</th>
+        <th>Duration</th>
+        <th>Status</th>
+        <th>Details</th>
+      </tr>
+      {{#inflight_catalog_operations}}
+      <tr>
+        <td>{{thread_id}}</td>
+        <td style="min-width:150px;word-break:break-all;">{{query_id}}</td>
+        <td>{{client_ip}}</td>
+        <td>{{coordinator}}</td>
+        <td>{{catalog_op_name}}</td>
+        <td>{{target_name}}</td>
+        <td>{{user}}</td>
+        <td>{{start_time}}</td>
+        <td>{{duration}}</td>
+        <td>{{status}}</td>
+        <td style="min-width:240px;word-break:break-all;">{{details}}</td>
+      </tr>
+      {{/inflight_catalog_operations}}
+    </table>
+  </div>
+</div>
+
+<div class="panel panel-info">
+<div class="card">
+  <div class="card-header">
+      <h5 class="card-title">
+      Finished Catalog Operations
+      </h5>
+  </div>
+  <div class="card-body">
+    <p>This table lists all completed catalog operations that are archived in memory.
+       The size of that archive is controlled with the
+       <samp>--catalog_operation_log_size</samp> command line parameter.</p>
+    <table id="finished_operations" class='table table-hover table-border'>
+      <tr>
+        <th>Thread ID</th>
+        <th>Query ID</th>
+        <th>Client IP</th>
+        <th>Coordinator</th>
+        <th>Type</th>
+        <th>Target</th>
+        <th>User</th>
+        <th>Start Time</th>
+        <th>End Time</th>
+        <th>Duration</th>
+        <th>Status</th>
+        <th>Details</th>
+      </tr>
+      {{#finished_catalog_operations}}
+      <tr>
+        <td>{{thread_id}}</td>
+        <td style="min-width:150px;word-break:break-all;">{{query_id}}</td>
+        <td>{{client_ip}}</td>
+        <td>{{coordinator}}</td>
+        <td>{{catalog_op_name}}</td>
+        <td>{{target_name}}</td>
+        <td>{{user}}</td>
+        <td>{{start_time}}</td>
+        <td>{{finish_time}}</td>
+        <td>{{duration}}</td>
+        <td>{{status}}</td>
+        <td style="word-break:break-all;">{{details}}</td>
+      </tr>
+      {{/finished_catalog_operations}}
+    </table>
+  </div>
+</div>
+
+{{> www/common-footer.tmpl }}

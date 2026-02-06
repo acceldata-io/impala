@@ -1,0 +1,67 @@
+#!/bin/bash
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+
+# This script runs the Impala shell. Python is required.
+#
+# This script assumes that the supporting library files for the Impala shell are
+# rooted in either the same directory that this script is in, or in a directory
+# in the environment variable ${IMPALA_SHELL_HOME}.
+#
+# The required directories are:
+# gen-py/ -- containing the Python thrift stubs for connecting to Impalad
+# lib/ -- containing the Hive Beeswax libraries; note this directory exists only in the
+#         shell tarball, not the Impala repository, see make_shell_tarball.sh for details
+# ext-py${VERSION}/ -- containing the external dependencies for the shell.
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+SHELL_HOME=${IMPALA_SHELL_HOME:-${SCRIPT_DIR}}
+
+# Set the envrionment's locale settings to allow for utf-8 compatibility
+export LC_CTYPE=${LC_CTYPE:-en_US.UTF-8}
+
+# Select python version; prefer 2, use 3 if 2's absent. Allow override with envvar
+PYTHON_EXE="${IMPALA_PYTHON_EXECUTABLE:-ambari-python-wrap}"
+if ! command -v "${PYTHON_EXE}" > /dev/null; then
+  PYTHON_EXE=python3
+fi
+
+PYTHONPATH="${SHELL_HOME}/gen-py:${SHELL_HOME}/lib:${PYTHONPATH}"
+
+# External dependencies are installed in /ext-py${PYTHON_VERSION}
+PYTHON_VERSION=$("${PYTHON_EXE}" -c 'import sys; \
+  print("{}.{}".format(sys.version_info.major, sys.version_info.minor))')
+if [ ! -d "${SHELL_HOME}/ext-py${PYTHON_VERSION}" ]; then
+  # List all ext-py* dirs, remove ext-py prefix, and join into a comma-separated string.
+  dirs=( $(cd ${SHELL_HOME} && echo ext-py*) )
+  vers="${dirs[@]#ext-py}"
+  pretty="$(printf "%s, " ${vers[@]})"
+  echo "This impala-shell package was not built to support Python ${PYTHON_VERSION}." \
+       "Supported Python versions are: ${pretty%, }."
+  exit 1
+fi
+
+PYTHONPATH="${SHELL_HOME}/ext-py${PYTHON_VERSION}:${PYTHONPATH}"
+
+if [ "${PYTHON_VERSION}" = "2.7" ]; then
+  # Python 2 requires the legacy pkg_resources.py code
+  PYTHONPATH="${PYTHONPATH}:${SHELL_HOME}/legacy"
+fi
+PYTHONPATH="${PYTHONPATH}" PYTHONIOENCODING='utf-8' exec ${PYTHON_EXE} \
+  ${SHELL_HOME}/impala_shell.py "$@"

@@ -1,0 +1,67 @@
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+{{> www/common-header.tmpl }}
+
+{{> www/query_detail_tabs.tmpl }}
+
+<pre id="query_plan">{{plan}}</pre>
+
+<script type="module">
+$("#plan-text-tab").addClass("active");
+
+import {inflateParseJSON} from "./www/scripts/compression_util.js";
+
+var dbOpenReq = indexedDB.open("imported_queries");
+var db;
+
+var supported_tabs = ["Query", "Timeline", "Text plan", "Profile"];
+
+if (window.location.search.includes("imported")) {
+  var alertMessage = document.getElementsByClassName("alert alert-danger")[0];
+  if (alertMessage) {
+    alertMessage.remove();
+  }
+  var nav_links = document.getElementsByClassName("nav nav-tabs")[0];
+  nav_links = nav_links.getElementsByClassName("nav-link");
+  for (var i = 0; i < nav_links.length;) {
+    if (supported_tabs.includes(nav_links[i].textContent)) {
+      nav_links[i].href = `${nav_links[i].href}&imported=true`;
+      i++;
+    } else {
+      nav_links[i].parentElement.remove();
+    }
+  }
+
+  dbOpenReq.onsuccess = (e) => {
+    db = e.target.result;
+    db.onerror = (e) => {
+      console.log("IndexedDB error");
+      console.log(e);
+    }
+    var profileStore = db.transaction("profiles", "readonly").objectStore("profiles");
+    profileStore.get(getQueryID()).onsuccess = (e) => {
+      query_plan.textContent = inflateParseJSON(e.target.result.profile).contents
+          .child_profiles[0].info_strings.find(({key}) => key === "Plan").value;
+    };
+  };
+}
+</script>
+
+{{> www/common-footer.tmpl }}
