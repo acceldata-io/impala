@@ -324,7 +324,7 @@ class OdpComponent(EnvVersionedPackage):
                unpack_directory_tmpl=None, makedir=False):
     template_subs = {"toolchain_host": os.environ["IMPALA_TOOLCHAIN_HOST"],
                      "odp_build_number": os.environ["ODP_BUILD_NUMBER"]}
-    url_prefix_tmpl = "https://mirror.odp.acceldata.dev/ODP/standalone/3.2.3.5-3/"
+    url_prefix_tmpl = "https://mirror.odp.acceldata.dev/ODP/standalone/3.2.3.5-301/"
 
     # Get the output base directory from CDP_COMPONENTS_HOME
     destination_basedir = os.environ["CDP_COMPONENTS_HOME"]
