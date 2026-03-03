@@ -302,7 +302,7 @@ under the License.
       </dependency>
 
       <!--
-      Pin org.glassfish:javax.el explicitly.
+      Pin org.glassfish:jakarta.el explicitly.
 
       HBase depends on this indirectly, and it's configured with
       a range of versions. This causes Maven to talk to all configured
@@ -311,8 +311,8 @@ under the License.
       -->
       <dependency>
         <groupId>org.glassfish</groupId>
-        <artifactId>javax.el</artifactId>
-        <version>3.0.1-b08</version>
+        <artifactId>jakarta.el</artifactId>
+        <version>3.0.4</version>
       </dependency>
 
       <dependency>
