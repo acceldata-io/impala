@@ -83,6 +83,11 @@ under the License.
     <aws_java_sdk_bundle.version>${env.IMPALA_AWS_JAVA_SDK_BUNDLE_VERSION}</aws_java_sdk_bundle.version>
     <protobuf-java.version>${env.IMPALA_PROTOBUF_JAVA_VERSION}</protobuf-java.version>
     <commons-configuration2.version>2.10.1</commons-configuration2.version>
+<<<<<<< Updated upstream
+=======
+    <jdom2.version>2.0.6.1</jdom2.version>
+    <aircompressor.version>2.0.3</aircompressor.version>
+>>>>>>> Stashed changes
     <!-- OSV-11063 netty-handler and
          related modules pulled in by kudu-client. 4.1.130.Final fixes all known Netty CVEs. -->
     <netty.version>4.1.130.Final</netty.version>
@@ -426,6 +431,19 @@ under the License.
         <artifactId>commons-configuration2</artifactId>
         <version>${commons-configuration2.version}</version>
       </dependency>
+<<<<<<< Updated upstream
+=======
+      <dependency>
+        <groupId>org.jdom</groupId>
+        <artifactId>jdom2</artifactId>
+        <version>${jdom2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.airlift</groupId>
+        <artifactId>aircompressor</artifactId>
+        <version>${aircompressor.version}</version>
+      </dependency>
+>>>>>>> Stashed changes
 
       <!-- Override Netty versions (transitive from kudu-client) to address multiple CVEs.
            OSV-11063 . Fixed in 4.1.129.Final. -->
