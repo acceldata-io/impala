@@ -84,6 +84,7 @@ under the License.
     <protobuf-java.version>${env.IMPALA_PROTOBUF_JAVA_VERSION}</protobuf-java.version>
     <commons-configuration2.version>2.10.1</commons-configuration2.version>
     <commons-lang3.version>3.18.0</commons-lang3.version>
+    <dnsjava.version>3.6.0</dnsjava.version>
     <!-- OSV-11063 netty-handler and
          related modules pulled in by kudu-client. 4.1.130.Final fixes all known Netty CVEs. -->
     <netty.version>4.1.130.Final</netty.version>
@@ -427,11 +428,16 @@ under the License.
         <artifactId>commons-configuration2</artifactId>
         <version>${commons-configuration2.version}</version>
       </dependency>
-      <dependency>
+       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-lang3</artifactId>
         <version>${commons-lang3.version}</version>
       </dependency>
+      <dependency>
+        <groupId>dnsjava</groupId>
+        <artifactId>dnsjava</artifactId>
+        <version>${dnsjava.version}</version>
+       </dependency>
 
       <!-- Override Netty versions (transitive from kudu-client) to address multiple CVEs.
            OSV-11063 . Fixed in 4.1.129.Final. -->
