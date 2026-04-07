@@ -367,7 +367,7 @@ under the License.
         </exclusion>
       </exclusions>
     </dependency>
-    <!-- OSV-11063 -  kudu-client pulls in netty-handler 4.1.94.Final; override to 4.1.130.Final. -->
+    <!-- OSV-11063 -  kudu-client pulls in netty-handler 4.1.94.Final; override to 4.1.132.Final. -->
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-handler</artifactId>
