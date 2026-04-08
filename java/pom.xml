@@ -88,8 +88,8 @@ under the License.
     <dnsjava.version>3.6.0</dnsjava.version>
     <aircompressor.version>2.0.3</aircompressor.version>
     <!-- OSV-11063 netty-handler and
-         related modules pulled in by kudu-client. 4.1.130.Final fixes all known Netty CVEs. -->
-    <netty.version>4.1.130.Final</netty.version>
+         related modules pulled in by kudu-client. 4.1.132.Final fixes all known Netty CVEs. -->
+    <netty.version>4.1.132.Final</netty.version>
   </properties>
 
   <repositories>
