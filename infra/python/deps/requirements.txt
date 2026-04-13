@@ -61,6 +61,15 @@ sasl == 0.2.1
 sh == 1.11
 six == 1.14.0
 sqlparse == 0.5.1
+  hatchling == 1.18.0
+    pathspec == 0.11.2
+    packaging == 23.1
+    editables == 0.3
+    trove-classifiers == 2023.10.18
+      calver == 2022.6.26
+    pluggy == 1.0.0
+    tomli == 2.0.1
+      flit-core == 3.9.0
 texttable == 0.8.3
 virtualenv == 16.7.10
 avro==1.10.2
