@@ -81,7 +81,6 @@ under the License.
     <commons-dbcp2.version>${env.IMPALA_DBCP2_VERSION}</commons-dbcp2.version>
     <log4j2.version>${env.IMPALA_LOG4J2_VERSION}</log4j2.version>
     <aws_java_sdk_bundle.version>${env.IMPALA_AWS_JAVA_SDK_BUNDLE_VERSION}</aws_java_sdk_bundle.version>
-    <protobuf-java.version>${env.IMPALA_PROTOBUF_JAVA_VERSION}</protobuf-java.version>
     <commons-configuration2.version>2.10.1</commons-configuration2.version>
     <jdom2.version>2.0.6.1</jdom2.version>
     <commons-lang3.version>3.18.0</commons-lang3.version>
@@ -418,12 +417,6 @@ under the License.
         <groupId>org.apache.logging.log4j</groupId>
         <artifactId>log4j-core</artifactId>
         <version>${log4j2.version}</version>
-      </dependency>
-
-      <dependency>
-        <groupId>com.google.protobuf</groupId>
-        <artifactId>protobuf-java</artifactId>
-        <version>${protobuf-java.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
