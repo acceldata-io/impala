@@ -360,12 +360,6 @@ under the License.
       <groupId>org.apache.kudu</groupId>
       <artifactId>kudu-client</artifactId>
       <version>${kudu.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.google.protobuf</groupId>
-          <artifactId>protobuf-java</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <!-- OSV-11063 -  kudu-client pulls in netty-handler 4.1.94.Final; override to 4.1.132.Final. -->
     <dependency>
