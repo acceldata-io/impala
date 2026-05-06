@@ -35,8 +35,8 @@ IS_PY36_OR_HIGHER=$(${PYTHON_EXE} -c "import sys; print(\
   'true' if sys.version_info.major >= 3 and sys.version_info.minor >= 6 else 'false')")
 
 # If using Python >= 3.6, try to use the builtin venv package.
-if $IS_PY36_OR_HIGHER ; then
-  if ${PYTHON_EXE} -m venv ${VENV_DIR} ; then
+if $IS_PY36_OR_HIGHER; then
+  if ${PYTHON_EXE} -m venv ${VENV_DIR}; then
     # Success
     exit 0
   fi
@@ -48,5 +48,7 @@ if $IS_PY36_OR_HIGHER ; then
   rm -rf ${VENV_DIR}
 fi
 
+python3.11 -m venv ${VENV_DIR}
+
 # Fall back to using the old impala-virtualenv method
-impala-virtualenv --python ${PYTHON_EXE} ${VENV_DIR}
+#impala-virtualenv --python ${PYTHON_EXE} ${VENV_DIR}
