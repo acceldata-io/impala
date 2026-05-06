@@ -170,6 +170,7 @@ def exec_pip_install(venv_dir, is_py3, args, cc="no-cc-available", env=None):
   setting the CC environment variable to a bogus value.
   Other environment vars can optionally be set with the 'env' argument. By default the
   current process's command line arguments are inherited.'''
+  is_py3 = True
   if not env: env = dict(os.environ)
   env["CC"] = cc
   # Since gcc is now built with toolchain binutils which may be newer than the
@@ -253,7 +254,7 @@ def download_toolchain_python(is_py3):
      Skip the download if SKIP_TOOLCHAIN_BOOTSTRAP=true in the environment. In that case
      only the presence of the Python executable is checked in the toolchain location.
   '''
-
+  is_py3 = True
   toolchain_packages_home = os.environ.get("IMPALA_TOOLCHAIN_PACKAGES_HOME")
   if not toolchain_packages_home:
     raise Exception("Impala environment not set up correctly, make sure "
@@ -278,6 +279,7 @@ def download_toolchain_python(is_py3):
 
 
 def install_deps(venv_dir, is_py3):
+  is_py3 = True
   py_str = "3" if is_py3 else "2"
   LOG.info("Installing setuptools into the python{0} virtualenv".format(py_str))
   exec_pip_install(venv_dir, is_py3, ["-r", SETUPTOOLS_REQS_PATH])
@@ -319,6 +321,7 @@ def install_adls_deps(venv_dir, is_py3):
 
 
 def install_py_version_deps(venv_dir, is_py3):
+  is_py3 = True
   cc = select_cc()
   assert cc is not None
   if not is_py3:
@@ -339,6 +342,7 @@ def install_kudu_client_if_possible(venv_dir, is_py3):
   '''Installs the Kudu python module if possible, which depends on the toolchain and
   the compiled requirements in requirements.txt. If the toolchain isn't
   available, nothing will be done.'''
+  is_py3 = True
   if reqs_are_installed(venv_dir, KUDU_REQS_PATH):
     LOG.debug("Skipping Kudu: matching kudu-installed-requirements.txt found")
     return
@@ -440,6 +444,7 @@ def reqs_are_installed(venv_dir, reqs_path):
 
 
 def setup_virtualenv_if_not_exists(venv_dir, is_py3):
+  is_py3 = True
   if not (reqs_are_installed(venv_dir, REQS_PATH)):
     delete_virtualenv_if_exist(venv_dir)
     create_virtualenv(venv_dir, is_py3)
@@ -477,11 +482,13 @@ if __name__ == "__main__":
   else:
     venv_dir = ENV_DIR_PY2
 
+
+  venv_dir = ENV_DIR_PY3
   if options.rebuild:
     delete_virtualenv_if_exist(venv_dir)
 
   # Complete as many bootstrap steps as possible (see file comment for the steps).
-  setup_virtualenv_if_not_exists(venv_dir, options.python3)
-  install_kudu_client_if_possible(venv_dir, options.python3)
-  install_adls_deps(venv_dir, options.python3)
-  install_py_version_deps(venv_dir, options.python3)
+  setup_virtualenv_if_not_exists(venv_dir, True)
+  install_kudu_client_if_possible(venv_dir, True)
+  install_adls_deps(venv_dir, True)
+  install_py_version_deps(venv_dir, True)
