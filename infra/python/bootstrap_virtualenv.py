@@ -109,7 +109,7 @@ def detect_virtualenv_version():
 
 
 def create_virtualenv(venv_dir, is_py3):
-  if is_py3:
+  if True:
     # Python 3 is much simpler, because there is a builtin venv command
     LOG.info("Creating python3 virtualenv")
     python_cmd = download_toolchain_python(is_py3)
