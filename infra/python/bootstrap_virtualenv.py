@@ -220,7 +220,8 @@ def exec_pip_install(venv_dir, is_py3, args, cc="no-cc-available", env=None):
     # to one of the requirements.txt files, this should trigger an error. However, we will
     # still access the index for version/dependency resolution, hence we need to change it
     # when using a private mirror.
-    third_party_pkg_install_cmd.append("--no-index")
+    #third_party_pkg_install_cmd.append("--no-index")
+    pass
 
   third_party_pkg_install_cmd.extend(["--find-links",
       "file://%s" % pathname2url(os.path.abspath(DEPS_DIR))])
