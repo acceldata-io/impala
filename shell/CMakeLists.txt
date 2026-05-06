@@ -1,4 +1,4 @@
-# Licensed to the Apache Software Foundation (ASF) under one
+#shell/CMakeLists.txt Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
 # regarding copyright ownership.  The ASF licenses this file
@@ -25,13 +25,6 @@ set(PIP_LOC "~/.cache/impala_pip")
 # Tests depend on installing system pythons to specific locations, so we error if they
 # won't match what's expected in this config and make_shell_tarball.sh.
 set(PYTHON_EXES $ENV{IMPALA_EXTRA_PACKAGE_PYTHONS})
-if (NOT $ENV{IMPALA_SYSTEM_PYTHON2} STREQUAL "")
-  get_filename_component(PYTHON_NAME $ENV{IMPALA_SYSTEM_PYTHON2} NAME)
-  if (NOT ${PYTHON_NAME} STREQUAL "python2")
-    message(FATAL_ERROR "IMPALA_SYSTEM_PYTHON2 must be a binary named python2")
-  endif()
-  list(APPEND PYTHON_EXES $ENV{IMPALA_SYSTEM_PYTHON2})
-endif()
 if (NOT $ENV{IMPALA_SYSTEM_PYTHON3} STREQUAL "")
   get_filename_component(PYTHON_NAME $ENV{IMPALA_SYSTEM_PYTHON3} NAME)
   if (NOT ${PYTHON_NAME} STREQUAL "python3")
@@ -87,11 +80,6 @@ add_custom_target(shell_pypi_test_package DEPENDS shell_tarball impala_python
     "${CMAKE_SOURCE_DIR}/shell/packaging/make_python_package.sh"
 )
 
-# Tests expect to find venvs at 'python2_venv' and 'python3_venv' in tests/shell/util.py.
-set(PYTHON2_VENV "${VENV_LOC}/python2_venv")
-add_custom_target(shell_python2_install DEPENDS "${PYTHON2_VENV}" shell_pypi_test_package
-  COMMAND "${PYTHON2_VENV}/bin/pip" install --cache-dir "${PIP_LOC}/python2" "${SHELL_TEST_PKG}"
-)
 
 set(PYTHON3_VENV "${VENV_LOC}/python3_venv")
 add_custom_target(shell_python3_install DEPENDS "${PYTHON3_VENV}" shell_pypi_test_package

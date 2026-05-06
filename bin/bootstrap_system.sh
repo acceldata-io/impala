@@ -44,22 +44,21 @@
 
 set -eu -o pipefail
 
-: ${IMPALA_HOME:=$(cd "$(dirname $0)"/..; pwd)}
+: ${IMPALA_HOME:=$(
+  cd "$(dirname $0)"/..
+  pwd
+)}
 export IMPALA_HOME
 
-if [[ -t 1 ]] # if on an interactive terminal
-then
+if [[ -t 1 ]]; then # if on an interactive terminal
   echo "This script will clobber some system settings. Are you sure you want to"
   echo -n "continue? "
-  while true
-  do
+  while true; do
     read -p "[yes/no] " ANSWER
     ANSWER=$(echo "$ANSWER" | tr /a-z/ /A-Z/)
-    if [[ $ANSWER = YES ]]
-    then
+    if [[ $ANSWER = YES ]]; then
       break
-    elif [[ $ANSWER = NO ]]
-    then
+    elif [[ $ANSWER = NO ]]; then
       echo "OK, Bye!"
       exit 1
     fi
@@ -97,26 +96,21 @@ if [[ -f /etc/redhat-release ]]; then
   # TODO: restrict redhat versions
 else
   source /etc/lsb-release
-  if [[ $DISTRIB_ID = Ubuntu ]]
-  then
+  if [[ $DISTRIB_ID = Ubuntu ]]; then
     UBUNTU=true
     echo "Identified Ubuntu system."
     # Kerberos setup would pop up dialog boxes without this
     export DEBIAN_FRONTEND=noninteractive
-    if [[ $DISTRIB_RELEASE = 16.04 ]]
-    then
+    if [[ $DISTRIB_RELEASE = 16.04 ]]; then
       UBUNTU16=true
       echo "Identified Ubuntu 16.04 system."
-    elif [[ $DISTRIB_RELEASE = 18.04 ]]
-    then
+    elif [[ $DISTRIB_RELEASE = 18.04 ]]; then
       UBUNTU18=true
       echo "Identified Ubuntu 18.04 system."
-    elif [[ $DISTRIB_RELEASE = 20.04 ]]
-    then
+    elif [[ $DISTRIB_RELEASE = 20.04 ]]; then
       UBUNTU20=true
       echo "Identified Ubuntu 20.04 system."
-    elif [[ $DISTRIB_RELEASE = 22.04 ]]
-    then
+    elif [[ $DISTRIB_RELEASE = 22.04 ]]; then
       UBUNTU22=true
       echo "Identified Ubuntu 22.04 system."
     else
@@ -209,8 +203,7 @@ REAL_APT_GET=$(ubuntu which apt-get)
 function apt-get {
   for ITER in $(seq 1 30); do
     echo "ATTEMPT: ${ITER}"
-    if sudo -E "${REAL_APT_GET}" "$@"
-    then
+    if sudo -E "${REAL_APT_GET}" "$@"; then
       return 0
     fi
     sleep "${ITER}"
@@ -231,12 +224,12 @@ source "$IMPALA_HOME/bin/impala-config-java.sh"
 
 ubuntu apt-get update
 ubuntu apt-get --yes install ccache curl file gawk g++ gcc apt-utils git libffi-dev \
-        libkrb5-dev krb5-admin-server krb5-kdc krb5-user libsasl2-dev \
-        libsasl2-modules libsasl2-modules-gssapi-mit libssl-dev make ninja-build \
-        python3-dev python3-setuptools python3-venv postgresql \
-        ssh wget vim-common psmisc lsof net-tools language-pack-en libxml2-dev \
-        libxslt-dev openjdk-${UBUNTU_JAVA_VERSION}-jdk \
-        openjdk-${UBUNTU_JAVA_VERSION}-source openjdk-${UBUNTU_JAVA_VERSION}-dbg
+  libkrb5-dev krb5-admin-server krb5-kdc krb5-user libsasl2-dev \
+  libsasl2-modules libsasl2-modules-gssapi-mit libssl-dev make ninja-build \
+  python3-dev python3-setuptools python3-venv postgresql \
+  ssh wget vim-common psmisc lsof net-tools language-pack-en libxml2-dev \
+  libxslt-dev openjdk-${UBUNTU_JAVA_VERSION}-jdk \
+  openjdk-${UBUNTU_JAVA_VERSION}-source openjdk-${UBUNTU_JAVA_VERSION}-dbg
 
 # Regular python packages don't exist on Ubuntu 22. Everything is Python 3.
 ubuntu16 apt-get --yes install python python-dev python-setuptools
@@ -249,22 +242,22 @@ ubuntu22 apt-get --yes install libtinfo5
 ARCH_NAME=$(uname -p)
 if [[ $ARCH_NAME == 'aarch64' ]]; then
   ubuntu apt-get --yes install unzip pkg-config flex maven python3-pip build-essential \
-          texinfo bison autoconf automake libtool libz-dev libncurses-dev \
-          libncurses5-dev libreadline-dev
+    texinfo bison autoconf automake libtool libz-dev libncurses-dev \
+    libncurses5-dev libreadline-dev
 fi
 
 # Configure the default Java version to be the version we selected.
 ubuntu sudo update-java-alternatives -s \
-    java-1.${UBUNTU_JAVA_VERSION}.0-openjdk-${UBUNTU_PACKAGE_ARCH}
+  java-1.${UBUNTU_JAVA_VERSION}.0-openjdk-${UBUNTU_PACKAGE_ARCH}
 
 redhat sudo yum install -y file gawk gcc gcc-c++ git krb5-devel krb5-server \
-        krb5-workstation libevent-devel libffi-devel make openssl-devel cyrus-sasl \
-        cyrus-sasl-gssapi cyrus-sasl-devel cyrus-sasl-plain \
-        postgresql postgresql-server rpm-build \
-        wget vim-common nscd cmake zlib-devel \
-        procps psmisc lsof openssh-server python3-devel python3-setuptools \
-        net-tools langpacks-en glibc-langpack-en libxml2-devel libxslt-devel \
-        java-${REDHAT_JAVA_VERSION}-openjdk-src java-${REDHAT_JAVA_VERSION}-openjdk-devel
+  krb5-workstation libevent-devel libffi-devel make openssl-devel cyrus-sasl \
+  cyrus-sasl-gssapi cyrus-sasl-devel cyrus-sasl-plain \
+  postgresql postgresql-server rpm-build \
+  wget vim-common nscd cmake zlib-devel \
+  procps psmisc lsof openssh-server python3-devel python3-setuptools \
+  net-tools langpacks-en glibc-langpack-en libxml2-devel libxslt-devel \
+  java-${REDHAT_JAVA_VERSION}-openjdk-src java-${REDHAT_JAVA_VERSION}-openjdk-devel
 
 # fuse-devel doesn't exist for Redhat 9
 redhat7 sudo yum install -y fuse-devel curl
@@ -280,7 +273,7 @@ redhat7 sudo yum install -y python-devel python-setuptools python-argparse
 # Install Python 2.x explicitly for CentOS 8
 function setup_python2() {
   if command -v python && [[ $(python --version 2>&1 | cut -d ' ' -f 2) =~ 2\. ]]; then
-    echo "We have Python 2.x";
+    echo "We have Python 2.x"
   else
     if ! command -v python2; then
       # Python2 needs to be installed
@@ -289,8 +282,8 @@ function setup_python2() {
     # Here Python2 is installed, but is not the default Python.
     # 1. Link pip's version to Python's version
     sudo alternatives --add-slave python /usr/bin/python2 /usr/bin/pip pip /usr/bin/pip2
-    sudo alternatives --add-slave python /usr/libexec/no-python  /usr/bin/pip pip \
-        /usr/libexec/no-python
+    sudo alternatives --add-slave python /usr/libexec/no-python /usr/bin/pip pip \
+      /usr/libexec/no-python
     # 2. Set Python2 (with pip2) to be the system default.
     sudo alternatives --set python /usr/bin/python2
   fi
@@ -298,26 +291,27 @@ function setup_python2() {
   sudo dnf -y install python2-devel
 }
 
-redhat8 setup_python2
+#redhat8 setup_python2
+
 redhat8 pip install --user argparse
 
 # Point Python to Python 3 for Redhat 9 and Ubuntu 22
 function setup_python3() {
   # If python is already set, then use it. Otherwise, try to point python to python3.
-  if ! command -v python > /dev/null; then
-    if command -v python3 ; then
+  if ! command -v python >/dev/null; then
+    if command -v python3; then
       # Newer OSes (e.g. Redhat 9 and equivalents) make it harder to get Python 2, and we
       # need to start using Python 3 by default.
       # For these new OSes (Ubuntu 22, Redhat 9), there is no alternative entry for
       # python, so we need to create one from scratch.
-      if command -v alternatives > /dev/null; then
-        if sudo alternatives --list | grep python > /dev/null ; then
+      if command -v alternatives >/dev/null; then
+        if sudo alternatives --list | grep python >/dev/null; then
           sudo alternatives --set python /usr/bin/python3
         else
           # The alternative doesn't exist, create it
           sudo alternatives --install /usr/bin/python python /usr/bin/python3 20
         fi
-      elif command -v update-alternatives > /dev/null; then
+      elif command -v update-alternatives >/dev/null; then
         # This is what Ubuntu 20/22+ does. There is no official python alternative,
         # so we need to create one.
         sudo update-alternatives --install /usr/bin/python python /usr/bin/python3 20
@@ -330,6 +324,7 @@ function setup_python3() {
   fi
 }
 
+redhat8 setup_python3
 redhat9 setup_python3
 ubuntu22 setup_python3
 
@@ -344,7 +339,7 @@ redhat sudo yum clean all
 if [ ! -d /usr/local/apache-maven-3.9.2 ]; then
   sudo wget -nv \
     https://archive.apache.org/dist/maven/maven-3/3.9.2/binaries/apache-maven-3.9.2-bin.tar.gz
-  sha512sum -c - <<< '900bdeeeae550d2d2b3920fe0e00e41b0069f32c019d566465015bdd1b3866395cbe016e22d95d25d51d3a5e614af2c83ec9b282d73309f644859bbad08b63db  apache-maven-3.9.2-bin.tar.gz'
+  sha512sum -c - <<<'900bdeeeae550d2d2b3920fe0e00e41b0069f32c019d566465015bdd1b3866395cbe016e22d95d25d51d3a5e614af2c83ec9b282d73309f644859bbad08b63db  apache-maven-3.9.2-bin.tar.gz'
   sudo tar -C /usr/local -xzf apache-maven-3.9.2-bin.tar.gz
   # Ensure that Impala's preferred version is installed locally,
   # even if a previous version exists there.
@@ -359,8 +354,7 @@ if [ ! -d /usr/local/apache-maven-3.9.2 ]; then
   redhat9 indocker sudo chmod 0755 ${MAVEN_DIRECTORY}/{bin,boot}
 fi
 
-if ! { service --status-all | grep -E '^ \[ \+ \]  ssh$'; }
-then
+if ! { service --status-all | grep -E '^ \[ \+ \]  ssh$'; }; then
   ubuntu sudo service ssh start
   redhat notindocker sudo service sshd start
   redhat indocker sudo /usr/bin/ssh-keygen -A
@@ -409,8 +403,7 @@ redhat indocker sudo -u postgres PGDATA=/var/lib/pgsql/data bash -c \
   "pg_ctl start -w --timeout=120 >> /var/lib/pgsql/pg.log 2>&1"
 
 # Set up postgres for HMS
-if ! [[ 1 = $(sudo -u postgres psql -At -c "SELECT count(*) FROM pg_roles WHERE rolname = 'hiveuser';") ]]
-then
+if ! [[ 1 = $(sudo -u postgres psql -At -c "SELECT count(*) FROM pg_roles WHERE rolname = 'hiveuser';") ]]; then
   sudo -u postgres psql -c "CREATE ROLE hiveuser LOGIN PASSWORD 'password';"
 fi
 sudo -u postgres psql -c "ALTER ROLE hiveuser WITH CREATEDB;"
@@ -426,13 +419,12 @@ fi
 # Setup ssh to ssh to localhost
 mkdir -p ~/.ssh
 chmod go-rwx ~/.ssh
-if ! [[ -f ~/.ssh/id_rsa ]]
-then
+if ! [[ -f ~/.ssh/id_rsa ]]; then
   ssh-keygen -t rsa -N '' -q -f ~/.ssh/id_rsa
 fi
 
-{ echo "" | cat - ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys; } && chmod 0600 ~/.ssh/authorized_keys
-echo -e "\nNoHostAuthenticationForLocalhost yes" >> ~/.ssh/config && chmod 0600 ~/.ssh/config
+{ echo "" | cat - ~/.ssh/id_rsa.pub >>~/.ssh/authorized_keys; } && chmod 0600 ~/.ssh/authorized_keys
+echo -e "\nNoHostAuthenticationForLocalhost yes" >>~/.ssh/config && chmod 0600 ~/.ssh/config
 ssh localhost whoami
 
 # Workarounds for HDFS networking issues: On the minicluster, tests that rely
@@ -461,7 +453,7 @@ echo -e "\n127.0.0.1 $(hostname) $(hostname -s)" | sudo tee -a /etc/hosts
 # "sed: cannot rename /etc/sedc3gPj8: Device or resource busy". The following lines are
 # basically sed -i but with cp instead of mv for -i part.
 NEW_HOSTS=$(mktemp)
-sed 's/127.0.1.1/127.0.0.1/g' /etc/hosts > "${NEW_HOSTS}"
+sed 's/127.0.1.1/127.0.0.1/g' /etc/hosts >"${NEW_HOSTS}"
 diff -u /etc/hosts "${NEW_HOSTS}" || true
 sudo cp "${NEW_HOSTS}" /etc/hosts
 rm "${NEW_HOSTS}"
@@ -488,19 +480,18 @@ redhat9 echo -e "* soft nproc unlimited" | sudo tee -a /etc/security/limits.conf
 echo ">>> Checking out Impala"
 
 # If there is no Impala git repo, get one now
-if ! [[ -d "$IMPALA_HOME" ]]
-then
+if ! [[ -d "$IMPALA_HOME" ]]; then
   time -p git clone https://gitbox.apache.org/repos/asf/impala.git "$IMPALA_HOME"
 fi
 cd "$IMPALA_HOME"
 SET_IMPALA_HOME="export IMPALA_HOME=$(pwd)"
-echo -e "\n$SET_IMPALA_HOME" >> ~/.bashrc
+echo -e "\n$SET_IMPALA_HOME" >>~/.bashrc
 eval "$SET_IMPALA_HOME"
 
 # Try to prepopulate the m2 directory to save time
-if [[ "${PREPOPULATE_M2_REPOSITORY:-true}" == true ]] ; then
+if [[ "${PREPOPULATE_M2_REPOSITORY:-true}" == true ]]; then
   echo ">>> Populating m2 directory..."
-  if ! bin/jenkins/populate_m2_directory.py ; then
+  if ! bin/jenkins/populate_m2_directory.py; then
     echo "Failed to prepopulate the m2 directory. Continuing..."
   fi
 else
