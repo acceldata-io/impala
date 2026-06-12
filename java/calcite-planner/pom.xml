@@ -31,12 +31,14 @@ under the License.
   <packaging>jar</packaging>
 
   <name>calcite-planner</name>
-
+  <properties>
+    <odp.release.version>3.4.3.0-1</odp.release.version>
+  </properties>
   <dependencies>
     <dependency>
       <groupId>org.apache.impala</groupId>
       <artifactId>impala-frontend</artifactId>
-      <version>4.5.0.3.4.3.0-1</version>
+      <version>4.5.0.${odp.release.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.calcite</groupId>
