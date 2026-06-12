@@ -32,6 +32,7 @@ under the License.
   them in bin/impala-config-branch.sh for cleaner patches.
   -->
   <properties>
+    <odp.release.version>3.4.3.0-1</odp.release.version>
     <surefire.reports.dir>${env.IMPALA_LOGS_DIR}/fe_tests</surefire.reports.dir>
     <jacoco.skip>true</jacoco.skip>
     <jacoco.data.file>${env.IMPALA_FE_TEST_COVERAGE_DIR}/jacoco.exec</jacoco.data.file>
