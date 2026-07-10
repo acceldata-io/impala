@@ -70,7 +70,7 @@ fi
 # WARNING: If changing this value, also run these commands:
 # cd ${IMPALA_HOME}/java
 # mvn versions:set -DnewVersion=YOUR_NEW_VERSION
-export IMPALA_VERSION=4.5.0-RELEASE
+export IMPALA_VERSION=4.5.0.3.4.3.0-1
 
 # Whether to build the backend on Avro C++ library or C.
 # This is added temporarily to help transitioning from Avro C to C++ library.
@@ -229,18 +229,19 @@ fi
 export IMPALA_TOOLCHAIN_HOST
 
 export CDP_BUILD_NUMBER=58457853
+export ODP_BUILD_NUMBER=3.4.3.0-1
 export CDP_MAVEN_REPOSITORY=\
 "https://${IMPALA_TOOLCHAIN_HOST}/build/cdp_components/${CDP_BUILD_NUMBER}/maven"
-export CDP_AVRO_JAVA_VERSION=1.11.1.7.3.1.0-160
-export CDP_HADOOP_VERSION=3.1.1.7.3.1.0-160
-export CDP_HBASE_VERSION=2.4.17.7.3.1.0-160
-export CDP_HIVE_VERSION=3.1.3000.7.3.1.0-160
-export CDP_ICEBERG_VERSION=1.3.1.7.3.1.0-160
-export CDP_KNOX_VERSION=2.0.0.7.3.1.0-160
-export CDP_OZONE_VERSION=1.3.0.7.3.1.0-160
-export CDP_PARQUET_VERSION=1.12.3.7.3.1.0-160
-export CDP_RANGER_VERSION=2.4.0.7.3.1.0-160
-export CDP_TEZ_VERSION=0.9.1.7.3.1.0-160
+export CDP_AVRO_JAVA_VERSION=1.11.1
+export CDP_HADOOP_VERSION=3.4.3.3.4.3.0-1
+export CDP_HBASE_VERSION=2.4.6.3.4.3.0-1
+export CDP_HIVE_VERSION=4.1.0.3.4.3.0-1
+export CDP_ICEBERG_VERSION=1.3.1
+export CDP_KNOX_VERSION=2.1.0.3.4.3.0-1
+export CDP_OZONE_VERSION=2.1.0.3.4.3.0-1
+export CDP_PARQUET_VERSION=1.12.3
+export CDP_RANGER_VERSION=2.8.0.3.4.3.0-1
+export CDP_TEZ_VERSION=0.10.5.3.4.3.0-1
 
 # Ref: https://infra.apache.org/release-download-pages.html#closer
 : ${APACHE_MIRROR:="https://www.apache.org/dyn/closer.cgi"}
