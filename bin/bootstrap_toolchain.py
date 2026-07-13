@@ -546,9 +546,9 @@ def get_hadoop_downloads():
     hive_src = ApacheComponent("hive", archive_basename_tmpl="apache-hive-${version}-src")
   else:
     hive = OdpComponent("hive", archive_basename_tmpl="apache-hive-${version}-bin")
-    hive_src = OdpComponent("hive-source",
+    hive_src = OdpComponent("hive",
                             explicit_version=os.environ.get("IMPALA_HIVE_VERSION"),
-                            archive_basename_tmpl="hive-${version}-source",
+                            archive_basename_tmpl="apache-hive-${version}-src",
                             unpack_directory_tmpl="hive-${version}")
   if use_apache_tez:
     tez = ApacheComponent("tez",
