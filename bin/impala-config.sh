@@ -420,8 +420,11 @@ if $USE_APACHE_HIVE; then
   export IMPALA_HIVE_STORAGE_API_VERSION=${APACHE_HIVE_STORAGE_API_VERSION}
 else
   # CDP hive version is used to build and deploy in minicluster when USE_APACHE_HIVE is
-  # false
-  export IMPALA_HIVE_DIST_TYPE="hive"
+  # false. IMPALA_HIVE_DIST_TYPE is still forced to "apache-hive" here (not "hive") so the
+  # build reuses the compat-apache-hive-4 translator code and the apache-hive-3 Maven
+  # profile's exclusions for Hive-4 builds; this does not change which Hive jars are
+  # actually downloaded/used, only which compat sources/profile get selected.
+  export IMPALA_HIVE_DIST_TYPE="apache-hive"
   export IMPALA_HIVE_VERSION=${HIVE_VERSION_OVERRIDE:-"$CDP_HIVE_VERSION"}
   export IMPALA_HIVE_URL=${CDP_HIVE_URL-}
   export IMPALA_HIVE_SOURCE_URL=${CDP_HIVE_SOURCE_URL-}
