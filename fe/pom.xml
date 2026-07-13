@@ -590,6 +590,12 @@ under the License.
           <groupId>org.apache.hadoop</groupId>
           <artifactId>*</artifactId>
         </exclusion>
+        <!-- IMPALA-11673: Ensure spring-jcl is not present, pulled in transitively via
+        org.springframework.ldap:spring-ldap-core. -->
+        <exclusion>
+          <groupId>org.springframework</groupId>
+          <artifactId>spring-jcl</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -622,6 +628,12 @@ under the License.
         <exclusion>
           <groupId>com.cloudera</groupId>
           <artifactId>*</artifactId>
+        </exclusion>
+        <!-- IMPALA-11673: Ensure spring-jcl is not present, pulled in transitively via
+        org.springframework:spring-jdbc -> org.springframework:spring-core. -->
+        <exclusion>
+          <groupId>org.springframework</groupId>
+          <artifactId>spring-jcl</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
