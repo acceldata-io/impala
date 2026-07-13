@@ -694,14 +694,21 @@ else
   export HIVE_HOME=${HIVE_HOME_OVERRIDE:-\
 "$CDP_COMPONENTS_HOME/apache-hive-${IMPALA_HIVE_VERSION}-bin"}
   export HIVE_SRC_DIR=${HIVE_SRC_DIR_OVERRIDE:-\
-"${CDP_COMPONENTS_HOME}/hive-${IMPALA_HIVE_VERSION}"}
+"${CDP_COMPONENTS_HOME}/apache-hive-${IMPALA_HIVE_VERSION}-src"}
   # Previously, there were multiple configurations and the "_cdp" included below
   # allowed the two to be distinct. We keep this "_cdp" for historical reasons.
   export METASTORE_DB=${METASTORE_DB-"$(cut -c-59 <<< HMS$ESCAPED_DB_UID)_cdp"}
 fi
-# Set the path to the hive_metastore.thrift which is used to build thrift code
-export HIVE_METASTORE_THRIFT_DIR=${HIVE_METASTORE_THRIFT_DIR_OVERRIDE:-\
+# Set the path to the hive_metastore.thrift which is used to build thrift code.
+# Hive 4's standalone-metastore module was split into sub-modules, moving the thrift
+# IDL under metastore-common; Hive 3 still has it directly under standalone-metastore.
+if [[ "${IMPALA_HIVE_MAJOR_VERSION}" -ge "4" ]]; then
+  export HIVE_METASTORE_THRIFT_DIR=${HIVE_METASTORE_THRIFT_DIR_OVERRIDE:-\
+"$HIVE_SRC_DIR/standalone-metastore/metastore-common/src/main/thrift"}
+else
+  export HIVE_METASTORE_THRIFT_DIR=${HIVE_METASTORE_THRIFT_DIR_OVERRIDE:-\
 "$HIVE_SRC_DIR/standalone-metastore/src/main/thrift"}
+fi
 if $USE_APACHE_TEZ; then
   export TEZ_HOME="$APACHE_COMPONENTS_HOME/apache-tez-${IMPALA_TEZ_VERSION}-bin"
 else
