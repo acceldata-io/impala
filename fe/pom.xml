@@ -160,9 +160,13 @@ under the License.
       </exclusions>
     </dependency>
 
+    <!-- ranger-plugins-audit is now an aggregator POM with no jar of its own (split into
+    ranger-audit-core plus per-destination modules). Depend on the same two split
+    artifacts Ranger's own hive-agent/hdfs-agent/hbase-agent plugins use in their place;
+    both transitively pull in ranger-audit-core. -->
     <dependency>
       <groupId>org.apache.ranger</groupId>
-      <artifactId>ranger-plugins-audit</artifactId>
+      <artifactId>ranger-audit-dest-hdfs</artifactId>
       <version>${ranger.version}</version>
       <exclusions>
         <!-- Ranger jar also includes solr artifacts which we not exclude here since
@@ -217,6 +221,50 @@ under the License.
         </exclusion>
         <!-- Exclude the aws-java-sdk-bundle dependency because the Impala minimal
              version of this dependency is used instead. -->
+        <exclusion>
+          <groupId>com.amazonaws</groupId>
+          <artifactId>aws-java-sdk-bundle</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.ranger</groupId>
+      <artifactId>ranger-audit-dest-solr</artifactId>
+      <version>${ranger.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.cloudera</groupId>
+          <artifactId>jwtprovider-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.cloudera</groupId>
+          <artifactId>jwtprovider-knox</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.kafka</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.logging.log4j</groupId>
+          <artifactId>log4j-1.2-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>log4j</groupId>
+          <artifactId>log4j</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.shiro</groupId>
+          <artifactId>shiro-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.orc</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hive</groupId>
+          <artifactId>hive-exec</artifactId>
+        </exclusion>
         <exclusion>
           <groupId>com.amazonaws</groupId>
           <artifactId>aws-java-sdk-bundle</artifactId>
