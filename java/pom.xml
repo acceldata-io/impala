@@ -84,7 +84,7 @@ under the License.
     <aws_java_sdk_bundle.version>${env.IMPALA_AWS_JAVA_SDK_BUNDLE_VERSION}</aws_java_sdk_bundle.version>
     <protobuf-java.version>${env.IMPALA_PROTOBUF_JAVA_VERSION}</protobuf-java.version>
     <commons-configuration2.version>2.10.1</commons-configuration2.version>
-    <netty.version>4.1.132.Final</netty.version>
+    <netty.version>4.1.133.Final</netty.version>
   </properties>
 
   <repositories>
@@ -428,7 +428,15 @@ under the License.
 
       <!-- Override Netty versions (transitive from kudu-client) to address multiple CVEs.
            OSV-11063 . Fixed in 4.1.129.Final. -->
+      
       <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-bom</artifactId>
+        <version>${netty.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+<dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-handler</artifactId>
         <version>${netty.version}</version>
