@@ -85,6 +85,7 @@ under the License.
     <protobuf-java.version>${env.IMPALA_PROTOBUF_JAVA_VERSION}</protobuf-java.version>
     <commons-configuration2.version>2.15.0</commons-configuration2.version>
     <netty.version>4.1.133.Final</netty.version>
+        <commons-lang3.version>3.18.0</commons-lang3.version>
   </properties>
 
   <repositories>
@@ -284,6 +285,12 @@ under the License.
 
   <dependencyManagement>
     <dependencies>
+<dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>3.18.0</version>
+      </dependency>
+
 
       <dependency>
         <groupId>ch.qos.logback</groupId>
