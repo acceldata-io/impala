@@ -87,6 +87,7 @@ under the License.
     <netty.version>4.1.133.Final</netty.version>
         <commons-lang3.version>3.18.0</commons-lang3.version>
         <commons-compress.version>1.26.0</commons-compress.version>
+        <jetty.version>9.4.57.v20241219</jetty.version>
   </properties>
 
   <repositories>
@@ -286,6 +287,14 @@ under the License.
 
   <dependencyManagement>
     <dependencies>
+<dependency>
+        <groupId>org.eclipse.jetty</groupId>
+        <artifactId>jetty-bom</artifactId>
+        <version>${jetty.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
 <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-compress</artifactId>
