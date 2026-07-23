@@ -86,6 +86,7 @@ under the License.
     <commons-configuration2.version>2.15.0</commons-configuration2.version>
     <netty.version>4.1.133.Final</netty.version>
         <commons-lang3.version>3.18.0</commons-lang3.version>
+        <commons-compress.version>1.26.0</commons-compress.version>
   </properties>
 
   <repositories>
@@ -285,6 +286,12 @@ under the License.
 
   <dependencyManagement>
     <dependencies>
+<dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-compress</artifactId>
+        <version>1.26.0</version>
+      </dependency>
+
 <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-lang3</artifactId>
