@@ -288,6 +288,12 @@ under the License.
   <dependencyManagement>
     <dependencies>
 <dependency>
+        <groupId>io.opentelemetry</groupId>
+        <artifactId>opentelemetry-api</artifactId>
+        <version>1.62.0</version>
+      </dependency>
+
+<dependency>
         <groupId>org.eclipse.jetty</groupId>
         <artifactId>jetty-bom</artifactId>
         <version>${jetty.version}</version>
