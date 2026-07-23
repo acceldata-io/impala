@@ -83,7 +83,7 @@ under the License.
     <log4j2.version>${env.IMPALA_LOG4J2_VERSION}</log4j2.version>
     <aws_java_sdk_bundle.version>${env.IMPALA_AWS_JAVA_SDK_BUNDLE_VERSION}</aws_java_sdk_bundle.version>
     <protobuf-java.version>${env.IMPALA_PROTOBUF_JAVA_VERSION}</protobuf-java.version>
-    <commons-configuration2.version>2.10.1</commons-configuration2.version>
+    <commons-configuration2.version>2.15.0</commons-configuration2.version>
     <netty.version>4.1.133.Final</netty.version>
   </properties>
 
