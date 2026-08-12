@@ -213,11 +213,11 @@ set (SRC_FILES
 SET_SOURCE_FILES_PROPERTIES(Status.thrift PROPERTIES OBJECT_DEPENDS ErrorCodes.thrift)
 
 add_custom_command(OUTPUT ErrorCodes.thrift
-  COMMAND python generate_error_codes.py
+  COMMAND ambari-python-wrap generate_error_codes.py
   DEPENDS generate_error_codes.py)
 
 add_custom_command(OUTPUT MetricDefs.thrift
-  COMMAND python generate_metrics.py
+  COMMAND ambari-python-wrap generate_metrics.py
   DEPENDS generate_metrics.py metrics.json)
 
 # The thrift-generated java classes defined in TCLIService are also pulled into our build
