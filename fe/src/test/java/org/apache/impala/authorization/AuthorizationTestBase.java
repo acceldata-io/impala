@@ -19,7 +19,6 @@ package org.apache.impala.authorization;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
-import com.sun.jersey.api.client.ClientResponse;
 import org.apache.impala.analysis.AnalysisContext;
 import org.apache.impala.authorization.ranger.RangerAuthorizationChecker;
 import org.apache.impala.authorization.ranger.RangerAuthorizationConfig;
@@ -54,6 +53,8 @@ import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status.Family;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -619,17 +620,16 @@ public abstract class AuthorizationTestBase extends FrontendTestBase {
   }
 
   protected long createRangerPolicy(String policyName, String json) {
-    ClientResponse response = rangerRestClient_
+    Response response = rangerRestClient_
         .getResource("/service/public/v2/api/policy")
-        .accept(RangerRESTUtils.REST_MIME_TYPE_JSON)
-        .type(RangerRESTUtils.REST_MIME_TYPE_JSON)
-        .post(ClientResponse.class, json);
+        .request(RangerRESTUtils.REST_MIME_TYPE_JSON)
+        .post(Entity.entity(json, RangerRESTUtils.REST_MIME_TYPE_JSON));
     if (response.getStatusInfo().getFamily() != Family.SUCCESSFUL) {
       throw new RuntimeException(String.format(
           "Unable to create a Ranger policy: %s Response: %s",
-          policyName, response.getEntity(String.class)));
+          policyName, response.readEntity(String.class)));
     }
-    String content = response.getEntity(String.class);
+    String content = response.readEntity(String.class);
     JSONParser parser = new JSONParser();
     long policyId = -1;
     try {
@@ -643,11 +643,12 @@ public abstract class AuthorizationTestBase extends FrontendTestBase {
   }
 
   protected void deleteRangerPolicy(String policyName) {
-    ClientResponse response = rangerRestClient_
+    Response response = rangerRestClient_
         .getResource("/service/public/v2/api/policy")
         .queryParam("servicename", RANGER_SERVICE_NAME)
         .queryParam("policyname", policyName)
-        .delete(ClientResponse.class);
+        .request()
+        .delete();
     if (response.getStatusInfo().getFamily() != Family.SUCCESSFUL) {
       throw new RuntimeException(
           String.format("Unable to delete Ranger policy: %s.", policyName));
