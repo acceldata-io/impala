@@ -530,6 +530,9 @@ elif [[ "${IMPALA_JDK_VERSION}" != "override" ]]; then
       DETECTED_JAVA_HOME="${JVMS_PATH}/java-1.8.0"
     else
       DETECTED_JAVA_HOME="${JVMS_PATH}/java-${IMPALA_JDK_VERSION}"
+      if [[ ! -d "${DETECTED_JAVA_HOME}" ]]; then
+        DETECTED_JAVA_HOME="${JVMS_PATH}/java-${IMPALA_JDK_VERSION}-openjdk"
+      fi
     fi
   fi
 
