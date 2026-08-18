@@ -272,7 +272,7 @@ export CDP_ICEBERG_VERSION=1.3.1
 export CDP_KNOX_VERSION=2.1.0.3.4.3.0-1
 export CDP_OZONE_VERSION=2.1.0.3.4.3.0-1
 export CDP_PARQUET_VERSION=1.12.3
-export CDP_RANGER_VERSION=2.8.0.3.4.3.0-1
+export CDP_RANGER_VERSION=2.9.0.3.4.3.0-1
 export CDP_TEZ_VERSION=0.10.5.3.4.3.0-1
 
 # Ref: https://infra.apache.org/release-download-pages.html#closer
