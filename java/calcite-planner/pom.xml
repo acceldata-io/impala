@@ -22,17 +22,17 @@ under the License.
   <parent>
     <groupId>org.apache.impala</groupId>
     <artifactId>impala-parent</artifactId>
-    <version>4.5.0.3.4.3.0-1</version>
+    <version>4.5.0.3.4.3.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
   <artifactId>calcite-planner</artifactId>
-  <version>4.5.0.3.4.3.0-1</version>
+  <version>4.5.0.3.4.3.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>calcite-planner</name>
   <properties>
-    <odp.release.version>3.4.3.0-1</odp.release.version>
+    <odp.release.version>3.4.3.0-SNAPSHOT</odp.release.version>
   </properties>
   <dependencies>
     <dependency>
