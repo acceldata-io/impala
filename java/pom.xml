@@ -21,7 +21,7 @@ under the License.
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.impala</groupId>
   <artifactId>impala-parent</artifactId>
-  <version>4.4.1.3.3.6.5-SNAPSHOT</version>
+  <version>4.4.1.3.3.6.6-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Apache Impala Parent POM</name>
   <!--
@@ -30,7 +30,7 @@ under the License.
   them in bin/impala-config-branch.sh for cleaner patches.
   -->
   <properties>
-    <odp.release.version>3.3.6.5-SNAPSHOT</odp.release.version>
+    <odp.release.version>3.3.6.6-SNAPSHOT</odp.release.version>
     <surefire.reports.dir>${env.IMPALA_LOGS_DIR}/fe_tests</surefire.reports.dir>
     <jacoco.skip>true</jacoco.skip>
     <jacoco.data.file>${env.IMPALA_FE_TEST_COVERAGE_DIR}/jacoco.exec</jacoco.data.file>
