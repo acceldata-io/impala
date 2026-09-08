@@ -270,7 +270,7 @@ export CDP_HBASE_VERSION=2.6.4.3.4.3.0-SNAPSHOT
 export CDP_HIVE_VERSION=4.1.0.3.4.3.0-SNAPSHOT
 export CDP_ICEBERG_VERSION=1.3.1
 export CDP_KNOX_VERSION=2.1.0.3.4.3.0-SNAPSHOT
-export CDP_OZONE_VERSION=2.1.0.3.4.3.0-SNAPSHOT
+export CDP_OZONE_VERSION=2.2.1.3.4.3.0-SNAPSHOT
 export CDP_PARQUET_VERSION=1.12.3
 export CDP_RANGER_VERSION=2.9.0.3.4.3.0-SNAPSHOT
 export CDP_TEZ_VERSION=0.10.5.3.4.3.0-SNAPSHOT
@@ -288,7 +288,7 @@ export APACHE_RANGER_VERSION=2.4.0
 export APACHE_TEZ_VERSION=0.10.2
 export APACHE_HIVE_VERSION=3.1.3
 export APACHE_HIVE_STORAGE_API_VERSION=2.7.0
-export APACHE_OZONE_VERSION=1.4.0
+export APACHE_OZONE_VERSION=2.2.1
 
 # Java dependencies that are not also runtime components. Declaring versions here allows
 # other branches to override them in impala-config-branch.sh for cleaner patches.
