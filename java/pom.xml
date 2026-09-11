@@ -84,7 +84,7 @@ under the License.
     <aws_java_sdk_bundle.version>${env.IMPALA_AWS_JAVA_SDK_BUNDLE_VERSION}</aws_java_sdk_bundle.version>
     <protobuf-java.version>${env.IMPALA_PROTOBUF_JAVA_VERSION}</protobuf-java.version>
     <commons-configuration2.version>2.15.0</commons-configuration2.version>
-    <netty.version>4.1.133.Final</netty.version>
+    <netty.version>4.1.137.Final</netty.version>
         <commons-lang3.version>3.18.0</commons-lang3.version>
         <commons-compress.version>1.26.0</commons-compress.version>
         <jetty.version>9.4.57.v20241219</jetty.version>
