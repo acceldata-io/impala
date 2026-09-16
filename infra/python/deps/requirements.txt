@@ -60,7 +60,8 @@ six == 1.14.0
 sqlparse == 0.3.1
 texttable == 0.8.3
 virtualenv == 16.7.10
-avro==1.12.1
+avro==1.10.2; python_version < "3"
+avro==1.12.0; python_version >= "3.8" # Impala is still using Python 3.8 internally
 thrift==0.21.0; python_version < "3"
 thrift==0.24.0; python_version >= "3"
 
