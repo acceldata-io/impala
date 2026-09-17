@@ -288,7 +288,20 @@ def download_toolchain_python(is_py3):
 def install_deps(venv_dir, is_py3):
   py_str = "3" if is_py3 else "2"
   LOG.info("Installing setuptools into the python{0} virtualenv".format(py_str))
-  exec_pip_install(venv_dir, is_py3, ["-r", SETUPTOOLS_REQS_PATH])
+
+  if is_py3:
+    exec_pip_install(venv_dir, is_py3, ["-r", SETUPTOOLS_REQS_PATH])
+  else:
+    # Python 2.7 requires the legacy setuptools toolchain. Install it first,
+    # then disable PEP 517 build isolation for setuptools-scm so that it
+    # cannot resolve a newer, Python-3-only setuptools version.
+    exec_pip_install(
+        venv_dir, is_py3,
+        ["setuptools==44.1.1", "wheel==0.35.1"])
+    exec_pip_install(
+        venv_dir, is_py3,
+        ["--no-build-isolation", "setuptools-scm==5.0.2"])
+
   cc = select_cc()
   if cc is None:
     raise Exception("CC not available")
