@@ -318,7 +318,6 @@ def install_deps(venv_dir, is_py3):
         venv_dir, is_py3,
         ["--no-build-isolation", "-r", REQS_PATH],
         cc=cc, env=env)
-
   mark_reqs_installed(venv_dir, REQS_PATH)
 
 
@@ -386,7 +385,10 @@ def install_py_version_deps(venv_dir, is_py3):
     if not reqs_are_installed(venv_dir, PY2_REQS_PATH):
       # These are extra python2-only packages
       LOG.info("Installing python2 packages into the virtualenv")
-      exec_pip_install(venv_dir, is_py3, ["-r", PY2_REQS_PATH], cc=cc)
+      exec_pip_install(
+          venv_dir, is_py3,
+          ["--no-build-isolation", "-r", PY2_REQS_PATH],
+          cc=cc)
       mark_reqs_installed(venv_dir, PY2_REQS_PATH)
   else:
     if not reqs_are_installed(venv_dir, PY3_REQS_PATH):
