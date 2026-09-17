@@ -307,7 +307,18 @@ def install_deps(venv_dir, is_py3):
     raise Exception("CC not available")
   env = dict(os.environ)
   LOG.info("Installing packages into the python{0} virtualenv".format(py_str))
-  exec_pip_install(venv_dir, is_py3, ["-r", REQS_PATH], cc=cc, env=env)
+
+  if is_py3:
+    exec_pip_install(
+        venv_dir, is_py3,
+        ["-r", REQS_PATH],
+        cc=cc, env=env)
+  else:
+    exec_pip_install(
+        venv_dir, is_py3,
+        ["--no-build-isolation", "-r", REQS_PATH],
+        cc=cc, env=env)
+
   mark_reqs_installed(venv_dir, REQS_PATH)
 
 
