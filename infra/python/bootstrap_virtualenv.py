@@ -288,13 +288,36 @@ def download_toolchain_python(is_py3):
 def install_deps(venv_dir, is_py3):
   py_str = "3" if is_py3 else "2"
   LOG.info("Installing setuptools into the python{0} virtualenv".format(py_str))
-  exec_pip_install(venv_dir, is_py3, ["-r", SETUPTOOLS_REQS_PATH])
+
+  if is_py3:
+    exec_pip_install(venv_dir, is_py3, ["-r", SETUPTOOLS_REQS_PATH])
+  else:
+    # Python 2.7 requires the legacy setuptools toolchain. Install it first,
+    # then disable PEP 517 build isolation for setuptools-scm so that it
+    # cannot resolve a newer, Python-3-only setuptools version.
+    exec_pip_install(
+        venv_dir, is_py3,
+        ["setuptools==44.1.1", "wheel==0.35.1"])
+    exec_pip_install(
+        venv_dir, is_py3,
+        ["--no-build-isolation", "setuptools-scm==5.0.2"])
+
   cc = select_cc()
   if cc is None:
     raise Exception("CC not available")
   env = dict(os.environ)
   LOG.info("Installing packages into the python{0} virtualenv".format(py_str))
-  exec_pip_install(venv_dir, is_py3, ["-r", REQS_PATH], cc=cc, env=env)
+
+  if is_py3:
+    exec_pip_install(
+        venv_dir, is_py3,
+        ["-r", REQS_PATH],
+        cc=cc, env=env)
+  else:
+    exec_pip_install(
+        venv_dir, is_py3,
+        ["--no-build-isolation", "-r", REQS_PATH],
+        cc=cc, env=env)
   mark_reqs_installed(venv_dir, REQS_PATH)
 
 
@@ -362,7 +385,10 @@ def install_py_version_deps(venv_dir, is_py3):
     if not reqs_are_installed(venv_dir, PY2_REQS_PATH):
       # These are extra python2-only packages
       LOG.info("Installing python2 packages into the virtualenv")
-      exec_pip_install(venv_dir, is_py3, ["-r", PY2_REQS_PATH], cc=cc)
+      exec_pip_install(
+          venv_dir, is_py3,
+          ["--no-build-isolation", "-r", PY2_REQS_PATH],
+          cc=cc)
       mark_reqs_installed(venv_dir, PY2_REQS_PATH)
   else:
     if not reqs_are_installed(venv_dir, PY3_REQS_PATH):
