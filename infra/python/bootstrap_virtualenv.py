@@ -140,8 +140,11 @@ def create_virtualenv(venv_dir, is_py3):
     file.extract(member, build_dir)
   file.close()
   python_cmd = download_toolchain_python(is_py3)
+  # Use --system-site-packages to avoid compatibility issues with
+  # virtualenv 16.7.10's embedded wheels on Ubuntu 20.04. This gives access to
+  # system python-setuptools, allowing pip bootstrap to succeed.
   exec_cmd([python_cmd, find_file(build_dir, "virtualenv*", "virtualenv.py"), "--quiet",
-      "--python", python_cmd, venv_dir])
+      "--system-site-packages", "--python", python_cmd, venv_dir])
   shutil.rmtree(build_dir)
 
 

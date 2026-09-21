@@ -113,3 +113,7 @@ gerrit_critic_venv
 
 # Output of single_node_perf_run.py
 perf_results/
+
+#not required
+ODP-6879-HIVE4-BUILD-FIXES.md
+infra/python/bootstrap_virtualenv.py.backup
