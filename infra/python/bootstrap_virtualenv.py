@@ -140,10 +140,7 @@ def create_virtualenv(venv_dir, is_py3):
     file.extract(member, build_dir)
   file.close()
   python_cmd = download_toolchain_python(is_py3)
-  # ODP-7909: Use --extra-search-dir to make virtualenv use wheels from DEPS_DIR
-  # instead of its embedded wheels which don't work on Ubuntu 20.04
-  exec_cmd([python_cmd, find_file(build_dir, "virtualenv*", "virtualenv.py"), "--quiet",
-      "--extra-search-dir", DEPS_DIR, "--never-download",
+  exec_cmd([python_cmd, find_file(build_dir, "virtualenv*", "virtualenv.py"), "verbose",
       "--python", python_cmd, venv_dir])
   shutil.rmtree(build_dir)
 
