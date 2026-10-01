@@ -73,7 +73,14 @@ ENDIF()
 # Note: apart from gold linker, binutils provides an up-to-date "as" utility. Older
 # distributions will have an "as" utility too old to process the output from
 # modern GCC.
-SET(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -B $ENV{IMPALA_TOOLCHAIN_PACKAGES_HOME}/binutils-$ENV{IMPALA_BINUTILS_VERSION}/bin/")
+# On distros newer than the toolchain's bundled binutils (e.g. RHEL/Rocky 10, whose
+# glibc emits DT_RELR ".relr.dyn" relocations that binutils 2.35.1 cannot read), the
+# toolchain's "as"/"ld" are older than the system ones and must be skipped so GCC
+# falls back to the system binutils on PATH. IMPALA_SKIP_TOOLCHAIN_BINUTILS is set by
+# do-component-build for those OSes.
+IF(NOT "$ENV{IMPALA_SKIP_TOOLCHAIN_BINUTILS}" STREQUAL "true")
+  SET(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -B $ENV{IMPALA_TOOLCHAIN_PACKAGES_HOME}/binutils-$ENV{IMPALA_BINUTILS_VERSION}/bin/")
+ENDIF()
 #  -Wno-deprecated-declarations: OpenSSL3 deprecated various APIs currently used by
 #      Impala, so this disables those warnings when using OpenSSL3 until they can be
 #      addressed. See IMPALA-12226.
