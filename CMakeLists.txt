@@ -521,7 +521,11 @@ add_custom_target(cscope ALL DEPENDS gen-deps
   COMMAND "${CMAKE_SOURCE_DIR}/bin/gen-cscope.sh"
 )
 
-add_custom_target(impala_python ALL
+# impala_python bootstraps Impala's bundled toolchain python-2.7.16 venv (installing
+# lxml etc.), independent of IMPALA_SYSTEM_PYTHON2. On distros without usable Python 2
+# support (e.g. toolchain binutils can't link lxml against RHEL/Rocky 10's glibc),
+# IMPALA_SKIP_PYTHON2=true drops it from the default build entirely.
+add_custom_target(impala_python
   COMMAND "${CMAKE_SOURCE_DIR}/bin/init-impala-python.sh"
 )
 
@@ -538,8 +542,13 @@ if (NOT $ENV{IMPALA_SYSTEM_PYTHON3} EQUAL "")
 endif()
 add_custom_target(impala_shell_pypi ALL DEPENDS ${IMPALA_PYTHON_INSTALLS})
 
+set(IMPALA_PYTHON2_TARGETS "")
+if (NOT "$ENV{IMPALA_SKIP_PYTHON2}" STREQUAL "true")
+  list(APPEND IMPALA_PYTHON2_TARGETS impala_python)
+endif()
+
 add_custom_target(notests_independent_targets DEPENDS
-  java cscope tarballs impala_python impala_python3 impala_shell_pypi
+  java cscope tarballs impala_python3 impala_shell_pypi ${IMPALA_PYTHON2_TARGETS}
 )
 add_custom_target(notests_regular_targets DEPENDS
   impalad statestored catalogd admissiond fesupport loggingsupport ImpalaUdf udasample udfsample impala-profile-tool
