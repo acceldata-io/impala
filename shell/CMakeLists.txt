@@ -41,6 +41,17 @@ if (NOT $ENV{IMPALA_SYSTEM_PYTHON3} STREQUAL "")
 endif()
 message(STATUS "Packaging for ${PYTHON_EXES}")
 
+# Supports fallback to impala-virtualenv for older Python versions. That fallback is
+# the only reason anything here needs impala_python (Impala's bundled toolchain
+# python2 venv); Python >= 3.6 venvs are created directly via the builtin "venv"
+# module and never touch it. Skip the dependency when IMPALA_SKIP_PYTHON2 drops
+# impala_python from the build entirely (e.g. RHEL/Rocky 10, where the old toolchain
+# binutils can't link it).
+set(IMPALA_PYTHON2_DEPENDS "")
+if (NOT "$ENV{IMPALA_SKIP_PYTHON2}" STREQUAL "true")
+  list(APPEND IMPALA_PYTHON2_DEPENDS impala_python)
+endif()
+
 foreach(PYTHON_EXE IN LISTS PYTHON_EXES)
   get_filename_component(PYTHON_NAME "${PYTHON_EXE}" NAME)
   # These virtualenvs serve two purposes:
@@ -55,8 +66,7 @@ foreach(PYTHON_EXE IN LISTS PYTHON_EXES)
   # inside ~/.cache. These typical consume a couple MB each.
   set(PIP_CACHE "${PIP_LOC}/${PYTHON_NAME}")
 
-  # Supports fallback to impala-virtualenv for older Python versions.
-  add_custom_command(OUTPUT "${VENV}" DEPENDS impala_python
+  add_custom_command(OUTPUT "${VENV}" DEPENDS ${IMPALA_PYTHON2_DEPENDS}
     COMMAND "${CMAKE_SOURCE_DIR}/bin/cmake_aux/create_virtualenv.sh"
             "${PYTHON_EXE}" "${VENV}"
     COMMAND "${VENV}/bin/pip" install --cache-dir "${PIP_CACHE}" wheel
@@ -69,7 +79,7 @@ add_custom_target(shell_tarball DEPENDS gen-deps "${IMPALA_PYTHON_BUILD_VENVS}"
   COMMAND "${CMAKE_SOURCE_DIR}/shell/make_shell_tarball.sh" ${PYTHON_EXES}
 )
 
-add_custom_target(shell_pypi_package DEPENDS shell_tarball impala_python
+add_custom_target(shell_pypi_package DEPENDS shell_tarball ${IMPALA_PYTHON2_DEPENDS}
   COMMAND "${CMAKE_SOURCE_DIR}/shell/packaging/make_python_package.sh"
 )
 
@@ -82,7 +92,7 @@ set(SHELL_TEST_PKG
   "${CMAKE_SOURCE_DIR}/shell/build/dist/impala_shell-${PKG_VERSION}.tar.gz")
 get_filename_component(SHELL_TEST_PKG_DIR "${SHELL_TEST_PKG}" DIRECTORY)
 # Generates SHELL_TEST_PKG
-add_custom_target(shell_pypi_test_package DEPENDS shell_tarball impala_python
+add_custom_target(shell_pypi_test_package DEPENDS shell_tarball ${IMPALA_PYTHON2_DEPENDS}
   COMMAND env BUILD_VERSION=${PKG_VERSION} OFFICIAL=true DIST_DIR="${SHELL_TEST_PKG_DIR}"
     "${CMAKE_SOURCE_DIR}/shell/packaging/make_python_package.sh"
 )
