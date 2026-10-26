@@ -69,7 +69,7 @@ foreach(PYTHON_EXE IN LISTS PYTHON_EXES)
   add_custom_command(OUTPUT "${VENV}" DEPENDS ${IMPALA_PYTHON2_DEPENDS}
     COMMAND "${CMAKE_SOURCE_DIR}/bin/cmake_aux/create_virtualenv.sh"
             "${PYTHON_EXE}" "${VENV}"
-    COMMAND "${VENV}/bin/pip" install --cache-dir "${PIP_CACHE}" wheel
+    COMMAND "${VENV}/bin/pip" install --cache-dir "${PIP_CACHE}" wheel setuptools
   )
 
   list(APPEND IMPALA_PYTHON_BUILD_VENVS "${VENV}")
