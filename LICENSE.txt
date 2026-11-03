@@ -589,7 +589,7 @@ shell/ext-py/prettytable-0.7.1: 3-clause BSD
 
 --------------------------------------------------------------------------------
 
-shell/ext-py/six-1.14.0: MIT license
+shell/ext-py/six-1.17.0: MIT license
 
 Copyright (c) 2010-2020 Benjamin Peterson
 
