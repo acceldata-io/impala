@@ -3,6 +3,26 @@ Changelog for six
 
 This file lists the changes in each six version.
 
+1.17.0
+------
+
+- Pull request #388: Remove `URLopener` and `FancyURLopener` classes from
+  `urllib.request` when running on Python 3.14 or greater.
+
+- Pull request #365, issue #283: `six.moves.UserDict` now points to
+  `UserDict.IterableUserDict` instead of `UserDict.UserDict` on Python 2.
+
+1.16.0
+------
+
+- Pull request #343, issue #341, pull request #349: Port _SixMetaPathImporter to
+  Python 3.10.
+
+1.15.0
+------
+
+- Pull request #331: Optimize `six.ensure_str` and `six.ensure_binary`.
+
 1.14.0
 ------
 
@@ -95,7 +115,7 @@ This file lists the changes in each six version.
 
 - Issue #98: Fix `six.moves` race condition in multi-threaded code.
 
-- Pull request #51: Add `six.view(keys|values|itmes)`, which provide dictionary
+- Pull request #51: Add `six.view(keys|values|items)`, which provide dictionary
   views on Python 2.7+.
 
 - Issue #112: `six.moves.reload_module` now uses the importlib module on
@@ -222,7 +242,7 @@ This file lists the changes in each six version.
 - Issue #40: Add import mapping for the Python 2 gdbm module.
 
 - Issue #35: On Python versions less than 2.7, print_ now encodes unicode
-  strings when outputing to standard streams. (Python 2.7 handles this
+  strings when outputting to standard streams. (Python 2.7 handles this
   automatically.)
 
 1.4.1
