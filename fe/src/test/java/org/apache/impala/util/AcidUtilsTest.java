@@ -599,10 +599,10 @@ public class AcidUtilsTest {
 
   @Test
   public void testWriteIdListCompare() {
-    ValidWriteIdList a =
-            new ValidReaderWriteIdList("default.test:1:1:1:");
-    ValidWriteIdList b =
-            new ValidReaderWriteIdList("default.test:1:9223372036854775807::");
+    ValidWriteIdList a = MetastoreShim.getValidWriteIdListFromString(
+            "default.test:1:1:1:");
+    ValidWriteIdList b = MetastoreShim.getValidWriteIdListFromString(
+            "default.test:1:9223372036854775807::");
 
     // should return -1 since b is more recent
     assert(AcidUtils.compare(a, b) == -1);
