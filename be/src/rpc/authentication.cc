@@ -636,6 +636,12 @@ bool GetUsernameFromBasicAuthHeader(
   return true;
 }
 
+bool SetOrigin(
+    ThriftServer::ConnectionContext* connection_context, const std::string& origin) {
+  connection_context->http_origin = origin;
+  return false;
+}
+
 bool TrustedDomainCheck(ThriftServer::ConnectionContext* connection_context,
     const AuthenticationHash& hash, const std::string& origin, string auth_header) {
   if (!IsTrustedDomain(origin, FLAGS_trusted_domain,
@@ -759,10 +765,9 @@ bool NegotiateAuth(ThriftServer::ConnectionContext* connection_context,
                     << TNetworkAddressToString(connection_context->network_address)
                     << ": " << spnego_status.ToString();
       } else {
+        string short_user = GetShortUsernameFromKerberosPrincipal(username);
         if (FLAGS_enable_ldap_auth &&
             FLAGS_enable_group_filter_check_for_authenticated_kerberos_user) {
-
-          string short_user = GetShortUsernameFromKerberosPrincipal(username);
 
           LOG(INFO) << "Checking LDAP group filters for "
                     << "username \"" << short_user << "\" "
@@ -784,6 +789,7 @@ bool NegotiateAuth(ThriftServer::ConnectionContext* connection_context,
         connection_context->username = username;
         // Save the username as Kerberos user principal in the connection context.
         connection_context->kerberos_user_principal = username;
+        connection_context->kerberos_user_short = short_user;
         // Create a cookie to return.
         connection_context->return_headers.push_back(
             Substitute("Set-Cookie: $0", GenerateCookie(username, hash)));
@@ -1371,8 +1377,8 @@ void SecureAuthProvider::SetupConnectionContext(
   TSocket* socket = nullptr;
   switch (underlying_transport_type) {
     case ThriftServer::BINARY: {
-      TBufferedTransport* buffered_transport =
-          down_cast<TBufferedTransport*>(input_transport);
+      ThriftServer::BufferedTransport* buffered_transport =
+          down_cast<ThriftServer::BufferedTransport*>(input_transport);
       TSaslServerTransport* sasl_transport = down_cast<TSaslServerTransport*>(
           buffered_transport->getUnderlyingTransport().get());
       socket = down_cast<TSocket*>(sasl_transport->getUnderlyingTransport().get());
@@ -1382,6 +1388,8 @@ void SecureAuthProvider::SetupConnectionContext(
         // Save the username as Kerberos user principal in the connection context
         // if the actual auth mechanism is Kerberos.
         connection_ptr->kerberos_user_principal = connection_ptr->username;
+        connection_ptr->kerberos_user_short =
+            GetShortUsernameFromKerberosPrincipal(connection_ptr->username);
       }
       break;
     }
@@ -1429,6 +1437,8 @@ void SecureAuthProvider::SetupConnectionContext(
         callbacks.trusted_auth_header_handle_fn = std::bind(
             HandleTrustedAuthHeader, connection_ptr.get(), hash_, std::placeholders::_1);
       }
+      callbacks.set_http_origin_fn = std::bind(SetOrigin, connection_ptr.get(),
+          std::placeholders::_1);
       http_input_transport->setCallbacks(callbacks);
       http_output_transport->setCallbacks(callbacks);
       socket = down_cast<TSocket*>(http_input_transport->getUnderlyingTransport().get());
@@ -1475,8 +1485,8 @@ void NoAuthProvider::SetupConnectionContext(
   TSocket* socket = nullptr;
   switch (underlying_transport_type) {
     case ThriftServer::BINARY: {
-      TBufferedTransport* buffered_transport =
-          down_cast<TBufferedTransport*>(input_transport);
+      ThriftServer::BufferedTransport* buffered_transport =
+          down_cast<ThriftServer::BufferedTransport*>(input_transport);
       socket = down_cast<TSocket*>(buffered_transport->getUnderlyingTransport().get());
       break;
     }
@@ -1490,9 +1500,12 @@ void NoAuthProvider::SetupConnectionContext(
           HttpPathFn, connection_ptr.get(), "", std::placeholders::_1,
           std::placeholders::_2, std::placeholders::_3);
       callbacks.return_headers_fn = std::bind(ReturnHeaders, connection_ptr.get());
+      callbacks.set_http_origin_fn = std::bind(SetOrigin, connection_ptr.get(),
+          std::placeholders::_1);
       http_input_transport->setCallbacks(callbacks);
       http_output_transport->setCallbacks(callbacks);
       socket = down_cast<TSocket*>(http_input_transport->getUnderlyingTransport().get());
+
       break;
     }
     default:

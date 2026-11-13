@@ -163,6 +163,7 @@ import org.apache.impala.thrift.TTypeNode;
 import org.apache.impala.thrift.TTypeNodeType;
 import org.apache.impala.thrift.TUpdateCatalogRequest;
 import org.apache.impala.thrift.TUpdatedPartition;
+import org.apache.impala.util.DebugUtils;
 import org.apache.impala.util.EventSequence;
 import org.apache.impala.util.MetaStoreUtil;
 import org.apache.impala.util.NoOpEventSequence;
@@ -1990,9 +1991,10 @@ public class MetastoreEventsProcessorTest {
     assertEquals(EventProcessorStatus.ACTIVE.toString(), response.getStatus());
     assertTrue("Atleast 5 events should have been received",
         response.getEvents_received() >= numEventsReceivedBefore + 5);
-    // two events on tbl which is skipped
-    assertTrue("Atleast 2 events should have been skipped",
-        response.getEvents_skipped() >= numEventsSkippedBefore + 2);
+    // The create table and add partition events of table tbl_should_skipped and
+    // the add partition event of table testEventProcessorMetrics are all skipped
+    assertTrue("3 events should be skipped",
+        response.getEvents_skipped() == numEventsSkippedBefore + 3);
     assertTrue("Event fetch duration should be greater than zero",
         response.getEvents_fetch_duration_mean() > 0);
     assertTrue("Event process duration should be greater than zero",
@@ -2003,6 +2005,74 @@ public class MetastoreEventsProcessorTest {
     assertTrue(response.getLast_synced_event_id() > lastEventSyncId);
   }
 
+  @Test
+  public void testEventProcessorMetricsForSkippedMetric() throws TException {
+    TEventProcessorMetrics responseBefore = eventsProcessor_.getEventProcessorMetrics();
+    long numEventsReceivedBefore = responseBefore.getEvents_received();
+    long numEventsSkippedBefore = responseBefore.getEvents_skipped();
+    long lastEventSyncId = responseBefore.getLast_synced_event_id();
+    final String testTblName1 = "testEventProcessorMetrics1";
+    final String testTblName2 = "testEventProcessorMetrics2";
+    // event 1
+    createDatabase(TEST_DB_NAME, null);
+    // event 2
+    createTable(null, TEST_DB_NAME, testTblName1, null, true, null);
+    List<List<String>> partitionVals = new ArrayList<>();
+    partitionVals.add(Arrays.asList("1"));
+    partitionVals.add(Arrays.asList("2"));
+    partitionVals.add(Arrays.asList("3"));
+    // event 3
+    addPartitions(TEST_DB_NAME, testTblName1, partitionVals);
+    eventsProcessor_.processEvents();
+    TEventProcessorMetrics response = eventsProcessor_.getEventProcessorMetrics();
+    assertEquals(EventProcessorStatus.ACTIVE.toString(), response.getStatus());
+    assertTrue("Atleast 3 events should have been received",
+            response.getEvents_received() >= numEventsReceivedBefore + 3);
+    assertTrue("we do not turn off disableHmsSync for table testTblName1",
+            response.getEvents_skipped() >= numEventsSkippedBefore);
+    TEventProcessorMetricsSummaryResponse summaryResponse =
+            catalog_.getEventProcessorSummary();
+    assertNotNull(summaryResponse);
+    assertTrue(response.getLast_synced_event_id() > lastEventSyncId);
+
+    // invalidate the table and the table will be IncompleteTable, then
+    // ALTER events will be skipped.
+    catalog_.invalidateTableIfExists(TEST_DB_NAME, testTblName1);
+    //event 4 alter table
+    alterTableAddCol(testTblName1, "newCol", "int", "no decription");
+    // event 5 alter partition
+    partitionVals.clear();
+    partitionVals.add(Arrays.asList("1"));
+    partitionVals.add(Arrays.asList("2"));
+    partitionVals.add(Arrays.asList("3"));
+    String newLocation = "/path/to/new_location/";
+    alterPartitions(testTblName1, partitionVals, newLocation);
+    eventsProcessor_.processEvents();
+    response = eventsProcessor_.getEventProcessorMetrics();
+    assertEquals(EventProcessorStatus.ACTIVE.toString(), response.getStatus());
+    assertTrue("two more events should have been received",
+            response.getEvents_received() >= numEventsReceivedBefore + 5);
+    assertTrue("we do not turn off disableHmsSync for table testTblName1",
+            response.getEvents_skipped() >= numEventsSkippedBefore);
+
+    // create with transaction table
+    //event 6
+    createTransactionalTable(TEST_DB_NAME, testTblName2, true);
+    partitionVals.clear();
+    partitionVals.add(Arrays.asList("1"));
+    partitionVals.add(Arrays.asList("2"));
+    partitionVals.add(Arrays.asList("3"));
+    String anotherNewLocation = "/path/to/another_new_location/";
+    //event 7
+    alterPartitions(testTblName1, partitionVals, anotherNewLocation);
+    eventsProcessor_.processEvents();
+    response = eventsProcessor_.getEventProcessorMetrics();
+    assertEquals(EventProcessorStatus.ACTIVE.toString(), response.getStatus());
+    assertTrue("two more events should have been received",
+            response.getEvents_received() >= numEventsReceivedBefore + 7);
+    assertTrue("we do not turn off disableHmsSync for table testTblName1",
+            response.getEvents_skipped() >= numEventsSkippedBefore);
+  }
   /**
    * Test makes sure that the event metrics are not set when event processor is not active
    */
@@ -3176,6 +3246,16 @@ public class MetastoreEventsProcessorTest {
     hmsTbl.getParameters().put("EXTERNAL", "false");
     fileMetadataLoadAfter = processAlterTableAndReturnMetric(testTblName, hmsTbl);
     assertEquals(fileMetadataLoadBefore + 1, fileMetadataLoadAfter);
+
+    // Test 9: Change trivial SD props and also change non-trivial
+    // TblProperties to verify file metadata is reloaded
+    LOG.info("Test changes in non-trivial tbl props and trivial SD");
+    hmsTbl = tbl.getMetaStoreTable().deepCopy();
+    hmsTbl.getSd().setBucketCols(Arrays.asList("c1"));
+    hmsTbl.getParameters().put("EXTERNAL", "true");
+    fileMetadataLoadBefore = fileMetadataLoadAfter;
+    fileMetadataLoadAfter = processAlterTableAndReturnMetric(testTblName, hmsTbl);
+    assertEquals(fileMetadataLoadBefore + 1, fileMetadataLoadAfter);
   }
 
   private long processAlterTableAndReturnMetric(String testTblName,
@@ -3937,6 +4017,107 @@ public class MetastoreEventsProcessorTest {
       simulateInsertIntoTransactionalTableFromFS(msTable, null, 1, txnId, writeId);
       MetastoreShim.commitTransaction(client.getHiveClient(), txnId);
     }
+  }
+
+  /**
+   * testEmptyPartitionValues() is a regression test for IMPALA-12856 to mimic the
+   * behavior of metastore returning partitions with empty values
+   * @throws Exception
+   */
+  @Test
+  public void testEmptyPartitionValues() throws Exception {
+    String prevFlag = BackendConfig.INSTANCE.debugActions();
+    try {
+      String tblName = "test_empty";
+      String managedTbl = "managedTblEmptyPartVals";
+      createDatabase(TEST_DB_NAME, null);
+      eventsProcessor_.processEvents();
+      createTable(tblName, true);
+      createTransactionalTable(TEST_DB_NAME, managedTbl, true);
+      eventsProcessor_.processEvents();
+      loadTable(tblName);
+      loadTable(managedTbl);
+      List<List<String>> partVals = new ArrayList<>(1);
+      partVals.add(Arrays.asList("1"));
+      addPartitions(TEST_DB_NAME, tblName, partVals);
+      addPartitions(TEST_DB_NAME, managedTbl, partVals);
+      eventsProcessor_.processEvents();
+      // Fire a reload event and process partition with empty values
+      MetastoreShim.fireReloadEventHelper(catalog_.getMetaStoreClient(), true,
+          Arrays.asList("1"), TEST_DB_NAME, tblName, Collections.emptyMap());
+      BackendConfig.INSTANCE.setDebugActions(DebugUtils.MOCK_EMPTY_PARTITION_VALUES);
+      processEventsAndVerifyStatus(prevFlag);
+      // insert partition event
+      simulateFiringInsertEvent(tblName, false);
+      BackendConfig.INSTANCE.setDebugActions(DebugUtils.MOCK_EMPTY_PARTITION_VALUES);
+      processEventsAndVerifyStatus(prevFlag);
+      // Alter partition event, managed and external table
+      String location = "/path/to/partition";
+      alterPartitions(tblName, partVals, location);
+      alterPartitions(managedTbl, partVals, location);
+      BackendConfig.INSTANCE.setDebugActions(DebugUtils.MOCK_EMPTY_PARTITION_VALUES);
+      processEventsAndVerifyStatus(prevFlag);
+      // Batch partition event
+      partVals.clear();
+      partVals.add(Arrays.asList("2"));
+      partVals.add(Arrays.asList("3"));
+      addPartitions(TEST_DB_NAME, tblName, partVals);
+      eventsProcessor_.processEvents();
+      simulateFiringInsertEvent(tblName, false);
+      BackendConfig.INSTANCE.setDebugActions(DebugUtils.MOCK_EMPTY_PARTITION_VALUES);
+      processEventsAndVerifyStatus(prevFlag);
+      // commit compaction event
+      addPartitions(TEST_DB_NAME, managedTbl, partVals);
+      simulateFiringInsertEvent(managedTbl, true);
+      simulateFiringInsertEvent(managedTbl, true);
+      BackendConfig.INSTANCE.setDebugActions(DebugUtils.MOCK_EMPTY_PARTITION_VALUES);
+      eventsProcessor_.processEvents();
+      // Run hive query to trigger compaction
+      try (HiveJdbcClientPool jdbcClientPool = HiveJdbcClientPool.create(1);
+           HiveJdbcClientPool.HiveJdbcClient hiveClient = jdbcClientPool.getClient()) {
+        hiveClient.executeSql(
+            "alter table " + TEST_DB_NAME + '.' + managedTbl +
+                " partition(p1=1) compact 'minor' and wait");
+      }
+      BackendConfig.INSTANCE.setDebugActions(DebugUtils.MOCK_EMPTY_PARTITION_VALUES);
+      processEventsAndVerifyStatus(prevFlag);
+    } finally {
+      BackendConfig.INSTANCE.setDebugActions(prevFlag);
+    }
+  }
+
+  private void simulateFiringInsertEvent(String tblName, boolean isTransactional)
+      throws Exception {
+    org.apache.hadoop.hive.metastore.api.Table msTbl;
+    List<Partition> partitions;
+    try (MetaStoreClient metaStoreClient = catalog_.getMetaStoreClient()) {
+      msTbl = metaStoreClient.getHiveClient().getTable(TEST_DB_NAME, tblName);
+      partitions = MetastoreShim
+          .getPartitions(metaStoreClient.getHiveClient(), TEST_DB_NAME, tblName);
+    }
+    assertNotNull(msTbl);
+    assertNotNull(partitions);
+    if (isTransactional) {
+      for (Partition part : partitions) {
+        try (MetaStoreClient client = catalog_.getMetaStoreClient()) {
+          long txnId = MetastoreShim.openTransaction(client.getHiveClient());
+          long writeId = MetastoreShim.allocateTableWriteId(
+              client.getHiveClient(), txnId, TEST_DB_NAME, tblName);
+          simulateInsertIntoTransactionalTableFromFS(msTbl, part, 1, txnId, writeId);
+          MetastoreShim.commitTransaction(client.getHiveClient(), txnId);
+        }
+      }
+    } else {
+      for (Partition part : partitions) {
+        simulateInsertIntoTableFromFS(msTbl, 1, part, false);
+      }
+    }
+  }
+
+  private void processEventsAndVerifyStatus(String prevFlag) {
+    eventsProcessor_.processEvents();
+    assertEquals(EventProcessorStatus.ACTIVE, eventsProcessor_.getStatus());
+    BackendConfig.INSTANCE.setDebugActions(prevFlag);
   }
 
   public void testAllocWriteIdEvent(String tblName, boolean isPartitioned,

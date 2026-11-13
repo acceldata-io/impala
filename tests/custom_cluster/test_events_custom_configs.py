@@ -1276,6 +1276,58 @@ class TestEventProcessingCustomConfigs(TestEventProcessingCustomConfigsBase):
     tables_removed_after = EventProcessorUtils.get_int_metric("tables-removed")
     assert tables_removed_after == tables_removed_before
 
+  @CustomClusterTestSuite.with_args(
+    catalogd_args="--hms_event_polling_interval_s=0")
+  def test_ep_delay_metadata_reload_for_insert(self, unique_database):
+    """IMPALA-12277: This test verifies that insert operation on a partitioned table
+    succeeds if the partition is dropped previously externally with the event processor
+    being lagging or not active. Impala should create a new partition in this case."""
+
+    def verify_partition(is_transactional, test_table="insert_part_reload"):
+      query = " ".join(["create table {}.{} (i int)", " partitioned by (year int) ",
+          self._get_transactional_tblproperties(is_transactional)])
+      self.client.execute(query.format(unique_database, test_table))
+      self.client.execute("insert into {}.{} partition(year) values (0,2024), (0,2022)"
+          .format(unique_database, test_table))
+      self.run_stmt_in_hive("alter table {}.{} drop partition(year=2024)"
+          .format(unique_database, test_table))
+      self.run_stmt_in_hive("alter table {}.{} add partition(year=2023)"
+          .format(unique_database, test_table))
+      self.run_stmt_in_hive("insert into {}.{} partition(year=2021) values (1)"
+          .format(unique_database, test_table))
+      self.client.execute(
+        "insert into {}.{} partition(year) values (0,2023), (0,2024), (0,2022)"
+        .format(unique_database, test_table))
+      EventProcessorUtils.wait_for_event_processing(self)
+      results = self.client.execute(
+        "select DISTINCT(year) from {}.{} order by year desc"
+        .format(unique_database, test_table))
+      assert results.data == ["2024", "2023", "2022", "2021"]
+      self.client.execute("drop table {}.{}".format(unique_database, test_table))
+    verify_partition(True)
+    verify_partition(False)
+
+  @pytest.mark.execute_serially
+  @CustomClusterTestSuite.with_args(
+    impalad_args="--use_local_catalog=true",
+    catalogd_args="--catalog_topic_mode=minimal --hms_event_polling_interval_s=5",
+    cluster_size=1)
+  def test_invalidate_stale_partition_on_reload(self, unique_database):
+    test_tbl = unique_database + ".test_invalidate_table"
+    self.client.execute("create table {} (id int) partitioned by (p int)"
+        .format(test_tbl))
+    self.client.execute("alter table {} add partition (p=0)".format(test_tbl))
+    self.client.execute("alter table {} add partition (p=1)".format(test_tbl))
+    self.client.execute("alter table {} add partition (p=2)".format(test_tbl))
+    self.run_stmt_in_hive("SET hive.exec.dynamic.partition.mode=nonstrict; "
+        "insert into {} partition(p) values (0,0),(1,1),(2,2)".format(test_tbl))
+    self.client.execute("select * from {}".format(test_tbl))
+    EventProcessorUtils.wait_for_event_processing(self)
+    log_regex = r"Invalidated objects in cache: \[partition %s:p=\d \(id=%%d\)\]" \
+        % test_tbl
+    self.assert_impalad_log_contains('INFO', log_regex % 0)
+    self.assert_impalad_log_contains('INFO', log_regex % 1)
+    self.assert_impalad_log_contains('INFO', log_regex % 2)
 
 @SkipIfFS.hive
 class TestEventProcessingWithImpala(TestEventProcessingCustomConfigsBase):

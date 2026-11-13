@@ -17,6 +17,8 @@
 
 package org.apache.impala.catalog.local;
 
+import static org.apache.impala.util.TUniqueIdUtil.PrintId;
+
 import java.lang.management.ManagementFactory;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -1088,7 +1090,7 @@ public class CatalogdMetaProvider implements MetaProvider {
       } else {
         checkResponse(table.msTable_.getPartitionKeysSize() == 0, req,
             "Should not return a partition with missing partition meta unless " +
-            "the table is unpartitioned");
+            "the table is unpartitioned: %s", part);
         // For the only partition of a nonpartitioned table, reuse table-level metadata.
         try {
           hdfsStorageDescriptor = HdfsStorageDescriptor.fromStorageDescriptor(
@@ -1571,7 +1573,7 @@ public class CatalogdMetaProvider implements MetaProvider {
         if (!catalogServiceId_.equals(Catalog.INITIAL_CATALOG_SERVICE_ID)) {
           LOG.warn("Detected catalog service restart: service ID changed from " +
               "{} to {}. Invalidating all cached metadata on this coordinator.",
-              catalogServiceId_, serviceId);
+              PrintId(catalogServiceId_), PrintId(serviceId));
         }
         catalogServiceId_ = serviceId;
         cache_.invalidateAll();

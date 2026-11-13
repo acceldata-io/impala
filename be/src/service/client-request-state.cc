@@ -175,6 +175,11 @@ ClientRequestState::ClientRequestState(const TQueryCtx& query_ctx, Frontend* fro
   summary_profile_->AddInfoString("Delegated User", do_as_user());
   summary_profile_->AddInfoString("Network Address",
       TNetworkAddressToString(session_->network_address));
+  if (!session_->http_origin.empty()) {
+    /// If using hs2-http protocol, this is the origin of the session
+    /// as recorded in the X-Forwarded-For http message header.
+    summary_profile_->AddInfoString("Http Origin", session_->http_origin);
+  }
   summary_profile_->AddInfoString("Default Db", default_db());
   summary_profile_->AddInfoStringRedacted(
       "Sql Statement", query_ctx_.client_request.stmt);
@@ -208,7 +213,13 @@ Status ClientRequestState::SetResultCache(QueryResultSet* cache,
 }
 
 void ClientRequestState::SetRemoteSubmitTime(int64_t remote_submit_time) {
-  query_events_->Start(remote_submit_time);
+  int64_t ack_submit_time = min(MonotonicStopWatch::Now(), remote_submit_time);
+  if (ack_submit_time < remote_submit_time) {
+    VLOG_QUERY << "Ignoring remote_submit_time (" << remote_submit_time
+               << " ns) that is more than coordinator time (" << ack_submit_time
+               << " ns) for query id=" << PrintId(query_id());
+  }
+  query_events_->Start(ack_submit_time);
 }
 
 void ClientRequestState::SetFrontendProfile(const TExecRequest& exec_request) {

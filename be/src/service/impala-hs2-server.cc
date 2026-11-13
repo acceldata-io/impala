@@ -333,6 +333,7 @@ void ImpalaServer::OpenSession(TOpenSessionResp& return_val,
     state->session_type = TSessionType::HIVESERVER2;
   }
   state->network_address = ThriftServer::GetThreadConnectionContext()->network_address;
+  state->http_origin = ThriftServer::GetThreadConnectionContext()->http_origin;
   state->last_accessed_ms = UnixMillis();
   // request.client_protocol is not guaranteed to be a valid TProtocolVersion::type, so
   // loading it can cause undefined behavior. Instead, we copy it to a value of the
@@ -356,6 +357,11 @@ void ImpalaServer::OpenSession(TOpenSessionResp& return_val,
     state->connected_user = request.username;
   } else {
     state->connected_user = FLAGS_anonymous_user_name;
+  }
+  // Set the 'connected_user_short' member in the SessionState. This is only used if
+  // the 'connected_user' is a kerberos principal.
+  if (!connection_context->kerberos_user_short.empty()) {
+    state->connected_user_short = connection_context->kerberos_user_short;
   }
 
   // Process the supplied configuration map.

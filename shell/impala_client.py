@@ -137,7 +137,7 @@ class ImpalaClient(object):
                verbose=True, use_http_base_transport=False, http_path=None,
                http_cookie_names=None, http_socket_timeout_s=None, value_converter=None,
                connect_max_tries=4, rpc_stdout=False, rpc_file=None, http_tracing=True,
-               jwt=None):
+               jwt=None, hs2_x_forward=None):
     self.connected = False
     self.impalad_host = impalad[0]
     self.impalad_port = int(impalad[1])
@@ -172,6 +172,8 @@ class ImpalaClient(object):
     self.value_converter = value_converter
     self.rpc_stdout = rpc_stdout
     self.rpc_file = rpc_file
+    # In h2s-http clients only, the value of the X-Forwarded-For http header.
+    self.hs2_x_forward = hs2_x_forward
 
   def connect(self):
     """Creates a connection to an Impalad instance. Returns a tuple with the impala
@@ -425,11 +427,11 @@ class ImpalaClient(object):
     if self.use_ldap:
       # Set the BASIC authorization
       user_passwd = "{0}:{1}".format(self.user, self.ldap_password)
-      if sys.version_info.major < 3 or \
-          sys.version_info.major == 3 and sys.version_info.minor == 0:
-        auth = base64.encodestring(user_passwd.encode()).decode().strip('\n')
-      else:
-        auth = base64.encodebytes(user_passwd.encode()).decode().strip('\n')
+      # Produce RFC 2617-compliant basic credentials:
+      #  - RFC 2045 encoding of username:password without limitations to 76 chars
+      #    per line (and without trailing newline)
+      #  - No translation of characters (+,/) for URL-safety
+      auth = base64.b64encode(user_passwd.encode()).decode()
       transport.setLdapAuth(auth)
     elif self.jwt is not None:
       transport.setJwtAuth(self.jwt)
@@ -744,6 +746,8 @@ class ImpalaHS2Client(ImpalaClient):
       assert getattr(self, "_current_request_id", None) is not None, \
         "request id was not set"
       headers["X-Request-Id"] = self._current_request_id
+    if self.hs2_x_forward:
+      headers["X-Forwarded-For"] = self.hs2_x_forward
 
     return headers
 

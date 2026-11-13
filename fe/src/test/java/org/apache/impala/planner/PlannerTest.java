@@ -492,6 +492,11 @@ public class PlannerTest extends PlannerTestBase {
   }
 
   @Test
+  public void testRewrite() {
+    runPlannerTestFile("rewrite");
+  }
+
+  @Test
   public void testValues() {
     runPlannerTestFile("values");
   }
@@ -1293,6 +1298,17 @@ public class PlannerTest extends PlannerTestBase {
   }
 
   /**
+   * Checks file format listing for Iceberg tables.
+   */
+  @Test
+  public void testIcebergMixedFileFormat() {
+    TQueryOptions options = defaultQueryOptions();
+    options.setExplain_level(TExplainLevel.VERBOSE);
+    runPlannerTestFile("iceberg-mixed-file-format", "functional_parquet", options,
+        ImmutableSet.of(PlannerTestOption.VALIDATE_CARDINALITY));
+  }
+
+  /**
    * Checks exercising predicate pushdown with Iceberg tables, without predicate
    * subsetting.
    */
@@ -1315,6 +1331,21 @@ public class PlannerTest extends PlannerTestBase {
     runPlannerTestFile("iceberg-v2-tables", "functional_parquet", options,
         ImmutableSet.of(PlannerTestOption.VALIDATE_CARDINALITY,
             PlannerTestOption.VALIDATE_ICEBERG_SNAPSHOT_IDS));
+  }
+
+  /**
+   * Check that Iceberg V2 table scans work as expected. Also check resource estimates.
+   */
+  @Test
+  public void testIcebergV2TableScansWithResources() {
+    TQueryOptions options = defaultQueryOptions();
+    options.setTimezone("UTC");
+    runPlannerTestFile("iceberg-v2-tables-resources", "functional_parquet", options,
+        ImmutableSet.of(
+            PlannerTestOption.EXTENDED_EXPLAIN,
+            PlannerTestOption.VALIDATE_CARDINALITY,
+            PlannerTestOption.VALIDATE_ICEBERG_SNAPSHOT_IDS,
+            PlannerTestOption.VALIDATE_RESOURCES));
   }
 
   /**

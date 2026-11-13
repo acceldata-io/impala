@@ -214,6 +214,7 @@ Status HdfsParquetScanner::Open(ScannerContext* context) {
 
   // Parse the file schema into an internal representation for schema resolution.
   schema_resolver_.reset(new ParquetSchemaResolver(*scan_node_->hdfs_table(),
+      file_metadata_utils_,
       state_->query_options().parquet_fallback_schema_resolution,
       state_->query_options().parquet_array_resolution));
   RETURN_IF_ERROR(schema_resolver_->Init(&file_metadata_, filename()));
@@ -1921,6 +1922,35 @@ Status HdfsParquetScanner::EvalDictionaryFilters(const parquet::RowGroup& row_gr
         break; // Passed the conjunct and runtime filter does not exist.
       }
     }
+
+    // NULL values are not included in the parquet dictionary. If the column contains
+    // NULL values, add evaluating for NULL values.
+    bool has_set_null_count =
+        col_metadata.__isset.statistics && col_metadata.statistics.__isset.null_count;
+    bool should_eval_null_value = !has_set_null_count
+        || (has_set_null_count && col_metadata.statistics.null_count > 0);
+    if (!column_has_match && should_eval_null_value) {
+      dict_filter_tuple->SetNull(slot_desc->null_indicator_offset());
+      TupleRow row;
+      row.SetTuple(0, dict_filter_tuple);
+      // Although the FE guarantees that dict_filter_conjunct evaluates
+      // to false on NULL, this condition is added for safety.
+      if (dict_filter_conjunct_evals == nullptr
+          || (dict_filter_conjunct_evals != nullptr
+          && ExecNode::EvalConjuncts(dict_filter_conjunct_evals->data(),
+              dict_filter_conjunct_evals->size(), &row))) {
+        column_has_match = true;
+        if (runtime_filters != nullptr && should_eval_runtime_filter) {
+          for (int rf_idx = 0; rf_idx < runtime_filters->size(); rf_idx++) {
+            if (!runtime_filters->at(rf_idx)->Eval(&row)) {
+              column_has_match = false;
+              break;
+            }
+          }
+        }
+      }
+    }
+
     // Free all expr result allocations now that we're done with the filter.
     context_->expr_results_pool()->Clear();
 
