@@ -7758,9 +7758,9 @@ public class CatalogOpExecutor {
       List<String> newFiles, boolean isInsertOverwrite) throws CatalogException {
     Preconditions.checkNotNull(newFiles);
     Preconditions.checkNotNull(partVals);
-    InsertEventRequestData insertEventRequestData = new InsertEventRequestData(
-        Lists.newArrayListWithCapacity(
-            newFiles.size()));
+    // Hive 4's generated InsertEventRequestData only has a no-arg constructor.
+    // Files are appended below via addToFilesAdded().
+    InsertEventRequestData insertEventRequestData = new InsertEventRequestData();
     boolean isTransactional = AcidUtils
         .isTransactionalTable(tbl.getMetaStoreTable().getParameters());
     // in case of unpartitioned table, partVals will be empty
