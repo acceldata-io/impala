@@ -576,6 +576,11 @@ under the License.
     </dependency>
     <dependency>
       <groupId>org.apache.hive</groupId>
+      <artifactId>hive-storage-api</artifactId>
+      <version>${hive.storage.api.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hive</groupId>
       <artifactId>hive-standalone-metastore-common</artifactId>
       <version>${hive.version}</version>
       <exclusions>

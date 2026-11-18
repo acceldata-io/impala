@@ -7658,9 +7658,9 @@ public class CatalogOpExecutor {
       List<String> newFiles, boolean isInsertOverwrite) throws CatalogException {
     Preconditions.checkNotNull(newFiles);
     Preconditions.checkNotNull(partVals);
-    InsertEventRequestData insertEventRequestData = new InsertEventRequestData(
-        Lists.newArrayListWithCapacity(
-            newFiles.size()));
+    // Thrift 0.24 generates no positional constructor; filesAdded is optional.
+    InsertEventRequestData insertEventRequestData = new InsertEventRequestData();
+    insertEventRequestData.setFilesAdded(Lists.newArrayListWithCapacity(newFiles.size()));
     boolean isTransactional = AcidUtils
         .isTransactionalTable(tbl.getMetaStoreTable().getParameters());
     // in case of unpartitioned table, partVals will be empty
