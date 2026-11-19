@@ -444,10 +444,6 @@ else
   export IMPALA_HIVE_SOURCE_URL=${CDP_HIVE_SOURCE_URL-}
   export IMPALA_HIVE_STORAGE_API_VERSION=${HIVE_STORAGE_API_VERSION_OVERRIDE:-\
 "$IMPALA_HIVE_VERSION"}
-
-  # TEST: Force specific version to verify Maven receives it correctly
-  export IMPALA_HIVE_STORAGE_API_VERSION="4.1.0.3.3.6.7-SNAPSHOT"
-  echo "TEST: IMPALA_HIVE_STORAGE_API_VERSION=$IMPALA_HIVE_STORAGE_API_VERSION"
 fi
 
 # Extract the first component of the hive version.
