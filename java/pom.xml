@@ -288,6 +288,12 @@ under the License.
 
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>org.apache.hive</groupId>
+        <artifactId>hive-storage-api</artifactId>
+        <version>${hive.storage.api.version}</version>
+      </dependency>
+
 <dependency>
         <groupId>io.grpc</groupId>
         <artifactId>grpc-netty-shaded</artifactId>
