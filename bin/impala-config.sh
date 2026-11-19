@@ -443,7 +443,7 @@ else
   export IMPALA_HIVE_URL=${CDP_HIVE_URL-}
   export IMPALA_HIVE_SOURCE_URL=${CDP_HIVE_SOURCE_URL-}
   export IMPALA_HIVE_STORAGE_API_VERSION=${HIVE_STORAGE_API_VERSION_OVERRIDE:-\
-"2.3.0.$IMPALA_HIVE_VERSION"}
+"$IMPALA_HIVE_VERSION"}
 fi
 
 # Extract the first component of the hive version.
