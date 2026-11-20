@@ -73,7 +73,7 @@ public class AcidUtilsTest {
 
     try {
       assertThat(AcidUtils.filterFilesForAcidState(stats, BASE_PATH,
-          new ValidReadTxnList(validTxnListStr), writeIds, null),
+          ValidReadTxnList.fromValue(validTxnListStr), writeIds, null),
           Matchers.containsInAnyOrder(expectedStats.toArray()));
     } catch (CatalogException me) {
       //TODO: Remove try-catch once IMPALA-9042 is resolved.
@@ -89,7 +89,7 @@ public class AcidUtilsTest {
         validWriteIdListStr);
       List<FileStatus> stats = createMockStats(relPaths);
       AcidUtils.filterFilesForAcidState(
-          stats, BASE_PATH, new ValidReadTxnList(validTxnListStr), writeIds, null);
+          stats, BASE_PATH, ValidReadTxnList.fromValue(validTxnListStr), writeIds, null);
     } catch (Exception e) {
       String errorString = e.getMessage();
       Preconditions.checkNotNull(errorString, "Stack trace lost during exception.");
@@ -618,9 +618,9 @@ public class AcidUtilsTest {
   @Test
   public void testWriteIdListCompare() {
     ValidWriteIdList a =
-            new ValidReaderWriteIdList("default.test:1:1:1:");
+            ValidReaderWriteIdList.fromValue("default.test:1:1:1:");
     ValidWriteIdList b =
-            new ValidReaderWriteIdList("default.test:1:9223372036854775807::");
+            ValidReaderWriteIdList.fromValue("default.test:1:9223372036854775807::");
 
     // should return -1 since b is more recent
     assert(AcidUtils.compare(a, b) == -1);
