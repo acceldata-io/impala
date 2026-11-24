@@ -224,6 +224,7 @@ export IMPALA_SIMBA_JDBC_DRIVER_VERSION=42-2.6.32.1041
 # thrift version in shell/ext-py, shell/packaging/requirements.txt, and
 # infra/python/deps/requirements.txt.
 export IMPALA_THRIFT_CPP_VERSION=0.16.0-p7
+export ODP_MIRROR_HOST='https://mirror-stg.odp.acceldata.dev'
 unset IMPALA_THRIFT_CPP_URL
 unset IMPALA_THRIFT_JAVA_URL
 if $USE_APACHE_HIVE; then
@@ -241,7 +242,7 @@ else
   # thrift-<version>-<compiler>-<label>-<arch>.tar.gz. The tarball unpacks to
   # thrift-0.24.0, which is what THRIFT_JAVA_HOME resolves to.
   export IMPALA_THRIFT_JAVA_VERSION=0.24.0
-  export IMPALA_THRIFT_JAVA_URL='https://mirror.odp.acceldata.dev/ODP/standalone/common_tars/libthrift/thrift-${version}-${compiler}-${label}-${arch}.tar.gz'
+  export IMPALA_THRIFT_JAVA_URL='${ODP_MIRROR_HOST}/ODP/standalone/common_tars/libthrift/thrift-${version}-${compiler}-${label}-${arch}.tar.gz'
 fi
 export IMPALA_THRIFT_PY_VERSION=0.16.0-p7
 unset IMPALA_THRIFT_PY_URL
